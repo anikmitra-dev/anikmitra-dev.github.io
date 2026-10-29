@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="bn">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -174,19 +174,19 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
   <!-- WELCOME -->
   <div class="screen active" id="welcome">
     <div class="logo">Agora<span>Works</span></div>
-    <div class="tagline">কাজ খুঁজুন, কাজ দিন, পণ্য কিনুন ও বিক্রি করুন — একই জায়গায়</div>
+    <div class="tagline">Find work, hire talent, buy and sell — all in one place</div>
     <div class="entry-grid">
-      <button class="entry-btn" onclick="enterApp('shop')"><span class="entry-icon">🛍️</span>কিনবো</button>
-      <button class="entry-btn" onclick="enterApp('shop')"><span class="entry-icon">🏪</span>বিক্রি করবো</button>
-      <button class="entry-btn" onclick="enterApp('work')"><span class="entry-icon">🧰</span>কাজ করবো</button>
-      <button class="entry-btn" onclick="enterApp('work')"><span class="entry-icon">📋</span>কাজ করাবো</button>
+      <button class="entry-btn" onclick="enterApp('shop')"><span class="entry-icon">🛍️</span>Buy</button>
+      <button class="entry-btn" onclick="enterApp('shop')"><span class="entry-icon">🏪</span>Sell</button>
+      <button class="entry-btn" onclick="enterApp('work')"><span class="entry-icon">🧰</span>Find Work</button>
+      <button class="entry-btn" onclick="enterApp('work')"><span class="entry-icon">📋</span>Hire Talent</button>
     </div>
-    <div class="demo-note">এটি একটি ডেমো প্রোটোটাইপ — সব ডেটা নমুনা (sample), আসল লেনদেন নয়</div>
+    <div class="demo-note">This is a demo prototype — all data is sample, not real transactions</div>
   </div>
 
   <!-- MAIN (search/listing) -->
   <div class="screen" id="main">
-    <div class="topbar"><h1>AgoraWorks</h1><button class="back-btn" onclick="goWelcome()">হোম</button></div>
+    <div class="topbar"><h1>AgoraWorks</h1><button class="back-btn" onclick="goWelcome()">Home</button></div>
     <div class="zone-toggle">
       <button id="tab-work" onclick="setZone('work')">Work Zone</button>
       <button id="tab-shop" onclick="setZone('shop')">Shop Zone</button>
@@ -194,95 +194,118 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
     <div class="search-wrap">
       <div class="search-box">
         <span>🔍</span>
-        <input id="searchInput" placeholder="খুঁজুন..." oninput="renderList()">
+        <input id="searchInput" placeholder="Search..." oninput="renderList()">
       </div>
     </div>
     <div class="list" id="listArea"></div>
     <div class="bottomnav">
-      <button class="nav-item active" data-nav="search" onclick="setNav('search')"><span class="nav-icon">🔍</span>খুঁজুন</button>
-      <button class="nav-item" data-nav="jobs" onclick="setNav('jobs')"><span class="nav-icon">📌</span>আমার পোস্ট</button>
-      <button class="nav-item" data-nav="messages" onclick="setNav('messages')"><span class="nav-icon">💬</span>মেসেজ</button>
-      <button class="nav-item" data-nav="profile" onclick="setNav('profile')"><span class="nav-icon">👤</span>প্রোফাইল</button>
+      <button class="nav-item active" data-nav="search" onclick="setNav('search')"><span class="nav-icon">🔍</span>Search</button>
+      <button class="nav-item" data-nav="jobs" onclick="setNav('jobs')"><span class="nav-icon">📌</span>My Posts</button>
+      <button class="nav-item" data-nav="connect" onclick="setNav('connect')"><span class="nav-icon">🧑‍🤝‍🧑</span>Connect</button>
+      <button class="nav-item" data-nav="messages" onclick="setNav('messages')"><span class="nav-icon">💬</span>Messages</button>
+      <button class="nav-item" data-nav="profile" onclick="setNav('profile')"><span class="nav-icon">👤</span>Profile</button>
     </div>
   </div>
 
   <!-- MESSAGES -->
   <div class="screen" id="messages-screen">
-    <div class="topbar"><h1>মেসেজ</h1><button class="back-btn" onclick="backToMain()">ফিরে যান</button></div>
+    <div class="topbar"><h1>Messages</h1><button class="back-btn" onclick="backToMain()">Back</button></div>
     <div class="empty-state">
       <div class="big">💬</div>
-      <div class="title">এখনো কোনো মেসেজ নেই</div>
-      <div>কোনো লিস্টিং-এ যোগাযোগ করলে কথোপকথন এখানে দেখাবে (ডেমো সংস্করণ)</div>
+      <div class="title">No messages yet</div>
+      <div>Conversations will appear here once you contact a listing (demo version)</div>
     </div>
     <div class="bottomnav">
-      <button class="nav-item" onclick="setNav('search')"><span class="nav-icon">🔍</span>খুঁজুন</button>
-      <button class="nav-item" onclick="setNav('jobs')"><span class="nav-icon">📌</span>আমার পোস্ট</button>
-      <button class="nav-item active" onclick="setNav('messages')"><span class="nav-icon">💬</span>মেসেজ</button>
-      <button class="nav-item" onclick="setNav('profile')"><span class="nav-icon">👤</span>প্রোফাইল</button>
+      <button class="nav-item" onclick="setNav('search')"><span class="nav-icon">🔍</span>Search</button>
+      <button class="nav-item" onclick="setNav('jobs')"><span class="nav-icon">📌</span>My Posts</button>
+      <button class="nav-item" onclick="setNav('connect')"><span class="nav-icon">🧑‍🤝‍🧑</span>Connect</button>
+      <button class="nav-item active" onclick="setNav('messages')"><span class="nav-icon">💬</span>Messages</button>
+      <button class="nav-item" onclick="setNav('profile')"><span class="nav-icon">👤</span>Profile</button>
     </div>
   </div>
 
   <!-- MY POSTS -->
   <div class="screen" id="jobs-screen">
-    <div class="topbar"><h1>আমার পোস্ট</h1><button class="back-btn" onclick="backToMain()">ফিরে যান</button></div>
-    <div style="padding:14px 18px 0;"><button class="add-account-btn" style="margin:0; width:100%;" onclick="startPost()">+ নতুন পোস্ট দিন</button></div>
+    <div class="topbar"><h1>My Posts</h1><button class="back-btn" onclick="backToMain()">Back</button></div>
+    <div style="padding:14px 18px 0;"><button class="add-account-btn" style="margin:0; width:100%;" onclick="startPost()">+ Add New Post</button></div>
     <div class="list" id="myPostsArea" style="flex:1;"></div>
     <div class="bottomnav">
-      <button class="nav-item" onclick="setNav('search')"><span class="nav-icon">🔍</span>খুঁজুন</button>
-      <button class="nav-item active" onclick="setNav('jobs')"><span class="nav-icon">📌</span>আমার পোস্ট</button>
-      <button class="nav-item" onclick="setNav('messages')"><span class="nav-icon">💬</span>মেসেজ</button>
-      <button class="nav-item" onclick="setNav('profile')"><span class="nav-icon">👤</span>প্রোফাইল</button>
+      <button class="nav-item" onclick="setNav('search')"><span class="nav-icon">🔍</span>Search</button>
+      <button class="nav-item active" onclick="setNav('jobs')"><span class="nav-icon">📌</span>My Posts</button>
+      <button class="nav-item" onclick="setNav('connect')"><span class="nav-icon">🧑‍🤝‍🧑</span>Connect</button>
+      <button class="nav-item" onclick="setNav('messages')"><span class="nav-icon">💬</span>Messages</button>
+      <button class="nav-item" onclick="setNav('profile')"><span class="nav-icon">👤</span>Profile</button>
+    </div>
+  </div>
+
+  <!-- CONNECT -->
+  <div class="screen" id="connect-screen">
+    <div class="topbar"><h1>Connect</h1><button class="back-btn" onclick="backToMain()">Back</button></div>
+    <div class="section-label">Your profile</div>
+    <div class="account-chip" style="border-bottom:1px solid var(--border);">
+      <div class="avatar" id="connectMyAvatar" style="width:44px;height:44px;font-size:16px;">?</div>
+      <div><div class="chip-name" id="connectMyName">Not logged in</div><div class="chip-sub" id="connectMySub">Log in to appear here and connect with others</div></div>
+    </div>
+    <div class="section-label">People on AgoraWorks</div>
+    <div class="list" id="connectList" style="padding-top:0;"></div>
+    <div class="bottomnav">
+      <button class="nav-item" onclick="setNav('search')"><span class="nav-icon">🔍</span>Search</button>
+      <button class="nav-item" onclick="setNav('jobs')"><span class="nav-icon">📌</span>My Posts</button>
+      <button class="nav-item active" onclick="setNav('connect')"><span class="nav-icon">🧑‍🤝‍🧑</span>Connect</button>
+      <button class="nav-item" onclick="setNav('messages')"><span class="nav-icon">💬</span>Messages</button>
+      <button class="nav-item" onclick="setNav('profile')"><span class="nav-icon">👤</span>Profile</button>
     </div>
   </div>
 
   <!-- AUTH -->
   <div class="screen" id="auth-screen">
-    <div class="topbar"><h1 id="authTitle">লগইন</h1><button class="back-btn" onclick="backToMain()">ফিরে যান</button></div>
+    <div class="topbar"><h1 id="authTitle">Log In</h1><button class="back-btn" onclick="backToMain()">Back</button></div>
     <div style="padding:20px 18px; flex:1;">
       <div id="authNameWrap" style="display:none; margin-bottom:12px;">
-        <div class="search-box" style="border-radius:12px;"><input id="authName" placeholder="আপনার নাম"></div>
+        <div class="search-box" style="border-radius:12px;"><input id="authName" placeholder="Your name"></div>
       </div>
-      <div style="margin-bottom:12px;"><div class="search-box" style="border-radius:12px;"><input id="authEmail" type="email" placeholder="ইমেইল"></div></div>
-      <div style="margin-bottom:16px;"><div class="search-box" style="border-radius:12px;"><input id="authPass" type="password" placeholder="পাসওয়ার্ড (কমপক্ষে ৬ অক্ষর)"></div></div>
+      <div style="margin-bottom:12px;"><div class="search-box" style="border-radius:12px;"><input id="authEmail" type="email" placeholder="Email"></div></div>
+      <div style="margin-bottom:16px;"><div class="search-box" style="border-radius:12px; position:relative;"><input id="authPass" type="password" placeholder="Password (at least 6 characters)" style="padding-right:38px;"><span onclick="togglePassEye()" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); cursor:pointer; font-size:18px; user-select:none;" id="passEyeIcon">👁️</span></div></div>
       <div id="authError" style="color:var(--danger); font-size:12.5px; margin-bottom:10px;"></div>
-      <button class="contact-btn" id="authSubmitBtn" onclick="submitAuth()">লগইন করুন</button>
+      <button class="contact-btn" id="authSubmitBtn" onclick="submitAuth()">Log In</button>
       <div style="text-align:center; margin-top:16px; font-size:13px; color:var(--muted);">
-        <span id="authSwitchText">অ্যাকাউন্ট নেই?</span>
-        <a href="#" style="color:var(--teal); font-weight:600;" onclick="toggleAuthMode();return false;" id="authSwitchLink">সাইন আপ করুন</a>
+        <span id="authSwitchText">Don't have an account?</span>
+        <a href="#" style="color:var(--teal); font-weight:600;" onclick="toggleAuthMode();return false;" id="authSwitchLink">Sign Up</a>
       </div>
     </div>
   </div>
 
   <!-- PROFILE -->
   <div class="screen" id="profile-screen">
-    <div class="topbar"><h1>প্রোফাইল</h1><button class="back-btn" onclick="backToMain()">ফিরে যান</button></div>
+    <div class="topbar"><h1>Profile</h1><button class="back-btn" onclick="backToMain()">Back</button></div>
     <div style="flex:1; overflow-y:auto; padding-bottom:90px;">
       <div class="profile-head">
         <div class="avatar" id="activeAvatar">A</div>
         <div>
           <div class="profile-name" id="activeName">Anik</div>
-          <div class="profile-sub" id="activeSub">anikmitra-dev · Work + Shop প্রোফাইল</div>
+          <div class="profile-sub" id="activeSub">anikmitra-dev · Work + Shop Profile</div>
         </div>
       </div>
-      <div class="section-label">অ্যাকাউন্ট সুইচ করুন (ডেমো)</div>
+      <div class="section-label">Switch Account (Demo)</div>
       <div id="accountList"></div>
-      <button class="add-account-btn" onclick="addAccount()">+ নতুন অ্যাকাউন্ট যোগ করুন</button>
-      <div class="section-label">সেটিংস</div>
-      <div class="row">স্কিল / সার্ভিস<span class="arrow">›</span></div>
-      <div class="row">বিক্রেতা তথ্য<span class="arrow">›</span></div>
-      <div class="row" onclick="logoutActive()">লগ-আউট<span class="arrow" style="color:var(--danger)">›</span></div>
+      <button class="add-account-btn" onclick="addAccount()">+ Add New Account</button>
+      <div class="section-label">Settings</div>
+      <div class="row">Skills / Services<span class="arrow">›</span></div>
+      <div class="row">Seller Info<span class="arrow">›</span></div>
+      <div class="row" onclick="logoutActive()">Log Out<span class="arrow" style="color:var(--danger)">›</span></div>
     </div>
     <div class="bottomnav">
-      <button class="nav-item" onclick="setNav('search')"><span class="nav-icon">🔍</span>খুঁজুন</button>
-      <button class="nav-item" onclick="setNav('jobs')"><span class="nav-icon">📌</span>আমার পোস্ট</button>
-      <button class="nav-item" onclick="setNav('messages')"><span class="nav-icon">💬</span>মেসেজ</button>
-      <button class="nav-item active" onclick="setNav('profile')"><span class="nav-icon">👤</span>প্রোফাইল</button>
+      <button class="nav-item" onclick="setNav('search')"><span class="nav-icon">🔍</span>Search</button>
+      <button class="nav-item" onclick="setNav('jobs')"><span class="nav-icon">📌</span>My Posts</button>
+      <button class="nav-item" onclick="setNav('connect')"><span class="nav-icon">🧑‍🤝‍🧑</span>Connect</button>
+      <button class="nav-item" onclick="setNav('messages')"><span class="nav-icon">💬</span>Messages</button>
+      <button class="nav-item active" onclick="setNav('profile')"><span class="nav-icon">👤</span>Profile</button>
     </div>
   </div>
 
   <!-- DETAIL -->
   <div class="screen" id="detail">
-    <div class="topbar"><h1>বিস্তারিত</h1><button class="back-btn" onclick="backToMain()">ফিরে যান</button></div>
+    <div class="topbar"><h1>Details</h1><button class="back-btn" onclick="backToMain()">Back</button></div>
     <div class="detail-body" id="detailBody"></div>
   </div>
 
@@ -291,16 +314,16 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 <script>
 // ---------- Demo data (clearly marked as sample, not real) ----------
 const WORK_DATA=[
-  {icon:'🎨',title:'লোগো ডিজাইন করে দেব',meta:['গ্রাফিক ডিজাইন','৩ দিনে ডেলিভারি'],price:'৳৮০০',desc:'পেশাদার লোগো ডিজাইন সার্ভিস। এটি একটি ডেমো লিস্টিং, বাস্তব অর্ডার নয়।'},
-  {icon:'💻',title:'ওয়েবসাইট তৈরি করব',meta:['ওয়েব ডেভেলপমেন্ট','৭ দিনে'],price:'৳৫,০০০',desc:'ছোট ব্যবসার জন্য ওয়েবসাইট। ডেমো ডেটা — শুধু প্রোটোটাইপ দেখানোর জন্য।'},
-  {icon:'📝',title:'কনটেন্ট রাইটিং দরকার',meta:['জব পোস্ট','ঢাকা'],price:'৳৩০০/আর্টিকেল',desc:'একজন ক্লায়েন্ট কনটেন্ট রাইটার খুঁজছেন (ডেমো পোস্ট)।'},
-  {icon:'📱',title:'অ্যাপ UI ডিজাইনার চাই',meta:['জব পোস্ট','রিমোট'],price:'৳২,৫০০',desc:'মোবাইল অ্যাপের জন্য UI ডিজাইন দরকার (ডেমো পোস্ট)।'},
+  {icon:'🎨',title:'Logo Design Service',meta:['Graphic Design','3-day delivery'],price:'৳800',desc:'Professional logo design service. This is a demo listing, not a real order.'},
+  {icon:'💻',title:'Website Development',meta:['Web Development','7 days'],price:'৳5,000',desc:'Website for small businesses. Demo data — for prototype display only.'},
+  {icon:'📝',title:'Content Writer Needed',meta:['Job Post','Dhaka'],price:'৳300/article',desc:'A client is looking for a content writer (demo post).'},
+  {icon:'📱',title:'App UI Designer Wanted',meta:['Job Post','Remote'],price:'৳2,500',desc:'UI design needed for a mobile app (demo post).'},
 ];
 const SHOP_DATA=[
-  {icon:'👕',title:'কাস্টম প্রিন্ট টি-শার্ট',meta:['ফ্যাশন','ঢাকা'],price:'৳৩৫০',desc:'১০০% কটন, কাস্টম ডিজাইন প্রিন্ট। এটি একটি ডেমো প্রোডাক্ট।'},
-  {icon:'🎧',title:'ওয়্যারলেস হেডফোন',meta:['ইলেকট্রনিক্স','স্টক আছে'],price:'৳১,২০০',desc:'ব্লুটুথ হেডফোন, ২০ ঘণ্টা ব্যাটারি ব্যাকআপ (ডেমো প্রোডাক্ট)।'},
-  {icon:'🧴',title:'হ্যান্ডমেড সাবান সেট',meta:['বিউটি','৩ পিস'],price:'৳৪৫০',desc:'প্রাকৃতিক উপাদানে তৈরি (ডেমো প্রোডাক্ট, নমুনা দাম)।'},
-  {icon:'📚',title:'পুরনো বই সংগ্রহ',meta:['বই','ব্যবহৃত'],price:'৳৬০',desc:'ভালো অবস্থায় থাকা পুরনো বই (ডেমো প্রোডাক্ট)।'},
+  {icon:'👕',title:'Custom Print T-Shirt',meta:['Fashion','Dhaka'],price:'৳350',desc:'100% cotton, custom design print. This is a demo product.'},
+  {icon:'🎧',title:'Wireless Headphones',meta:['Electronics','In stock'],price:'৳1,200',desc:'Bluetooth headphones, 20-hour battery backup (demo product).'},
+  {icon:'🧴',title:'Handmade Soap Set',meta:['Beauty','3 pieces'],price:'৳450',desc:'Made with natural ingredients (demo product, sample price).'},
+  {icon:'📚',title:'Used Book Collection',meta:['Books','Used'],price:'৳60',desc:'Old books in good condition (demo product).'},
 ];
 
 let state={zone:'work', nav:'search'};
@@ -337,14 +360,14 @@ function renderList(){
   const list=document.getElementById('listArea');
   list.innerHTML='';
   if(filtered.length===0){
-    list.innerHTML='<div class="empty-state"><div class="big">🔎</div><div class="title">কিছু পাওয়া যায়নি</div></div>';
+    list.innerHTML='<div class="empty-state"><div class="big">🔎</div><div class="title">No results found</div></div>';
     return;
   }
   filtered.forEach(function(item){
     const card=document.createElement('div');
     card.className='card';
     card.onclick=function(){openDetail(item);};
-    const tag = item.shared ? 'লাইভ' : 'ডেমো';
+    const tag = item.shared ? 'Live' : 'Demo';
     const metaText = item.shared ? (item.zone==='work'?'Work Zone':'Shop Zone') : item.meta.join(' · ');
     card.innerHTML='<div class="thumb">'+item.icon+'</div><div class="card-body"><div class="demo-tag">'+tag+'</div><div class="card-title">'+item.title+'</div><div class="card-meta"><span>'+metaText+'</span></div></div><div class="price">'+item.price+'</div>';
     list.appendChild(card);
@@ -352,20 +375,20 @@ function renderList(){
 }
 
 async function startPost(){
-  if(!currentUser){ alert('পোস্ট করতে আগে লগইন করুন'); openAuth(); return; }
-  const zone = confirm('এটি কি Work Zone পোস্ট? (OK = Work, Cancel = Shop)') ? 'work' : 'shop';
-  const title = prompt('পোস্টের শিরোনাম লিখুন:');
+  if(!currentUser){ alert('Please log in first to post'); openAuth(); return; }
+  const zone = confirm('Is this a Work Zone post? (OK = Work, Cancel = Shop)') ? 'work' : 'shop';
+  const title = prompt('Enter post title:');
   if(!title) return;
-  const price = prompt('দাম লিখুন (যেমন ৫০০):') || 'আলোচনা সাপেক্ষে';
-  const desc = prompt('সংক্ষিপ্ত বিবরণ লিখুন:') || '';
-  const post = {icon: zone==='work'?'🧰':'🛍️', title:title, meta:['পোস্ট'], price: price.indexOf('৳')===0?price:'৳'+price, desc:desc, zone:zone, ownerId:currentUser.uid, ownerName:currentUserName};
+  const price = prompt('Enter price (e.g. 500):') || 'Negotiable';
+  const desc = prompt('Enter a short description:') || '';
+  const post = {icon: zone==='work'?'🧰':'🛍️', title:title, meta:['Post'], price: price.indexOf('৳')===0?price:'৳'+price, desc:desc, zone:zone, ownerId:currentUser.uid, ownerName:currentUserName};
   try{
     const withTime = Object.assign({}, post, {createdAt: firebase.firestore.FieldValue.serverTimestamp()});
     await window.fbDb.collection('posts').add(withTime);
     await loadSharedPosts();
-    alert('পোস্ট হয়েছে! এখন সবাই এটা দেখতে পাবে।');
+    alert('Posted! Everyone can see it now.');
   }catch(e){
-    alert('পোস্ট করতে সমস্যা হয়েছে: ' + (e.message||e.code));
+    alert('Failed to post: ' + (e.message||e.code));
   }
 }
 function renderMyPosts(){
@@ -374,25 +397,31 @@ function renderMyPosts(){
   wrap.innerHTML='';
   const mine = currentUser ? sharedPosts.filter(function(p){return p.ownerId===currentUser.uid;}) : [];
   if(mine.length===0){
-    wrap.innerHTML='<div class="empty-state"><div class="big">📌</div><div class="title">আপনার কোনো পোস্ট নেই</div><div>উপরে বাটনে চেপে প্রথম পোস্ট দিন (লগইন লাগবে)</div></div>';
+    wrap.innerHTML='<div class="empty-state"><div class="big">📌</div><div class="title">You have no posts yet</div><div>Tap the button above to add your first post (login required)</div></div>';
     return;
   }
   mine.forEach(function(item){
     const card=document.createElement('div');
     card.className='card';
     card.onclick=function(){openDetail(item);};
-    card.innerHTML='<div class="thumb">'+item.icon+'</div><div class="card-body"><div class="demo-tag">লাইভ</div><div class="card-title">'+item.title+'</div><div class="card-meta"><span>'+(item.zone==='work'?'Work Zone':'Shop Zone')+'</span></div></div><div class="price">'+item.price+'</div>';
+    card.innerHTML='<div class="thumb">'+item.icon+'</div><div class="card-body"><div class="demo-tag">Live</div><div class="card-title">'+item.title+'</div><div class="card-meta"><span>'+(item.zone==='work'?'Work Zone':'Shop Zone')+'</span></div></div><div class="price">'+item.price+'</div>';
     wrap.appendChild(card);
   });
 }
 let authMode='login';
+function togglePassEye(){
+  const inp = document.getElementById('authPass');
+  const icon = document.getElementById('passEyeIcon');
+  if(inp.type === 'password'){ inp.type = 'text'; icon.style.opacity = '1'; icon.textContent = '🙈'; }
+  else { inp.type = 'password'; icon.style.opacity = '0.6'; icon.textContent = '👁️'; }
+}
 function toggleAuthMode(){
   authMode = authMode==='login' ? 'signup' : 'login';
   document.getElementById('authNameWrap').style.display = authMode==='signup' ? 'block':'none';
-  document.getElementById('authTitle').textContent = authMode==='signup' ? 'সাইন আপ' : 'লগইন';
-  document.getElementById('authSubmitBtn').textContent = authMode==='signup' ? 'অ্যাকাউন্ট তৈরি করুন' : 'লগইন করুন';
-  document.getElementById('authSwitchText').textContent = authMode==='signup' ? 'আগে থেকেই অ্যাকাউন্ট আছে?' : 'অ্যাকাউন্ট নেই?';
-  document.getElementById('authSwitchLink').textContent = authMode==='signup' ? 'লগইন করুন' : 'সাইন আপ করুন';
+  document.getElementById('authTitle').textContent = authMode==='signup' ? 'Sign Up' : 'Log In';
+  document.getElementById('authSubmitBtn').textContent = authMode==='signup' ? 'Create Account' : 'Log In';
+  document.getElementById('authSwitchText').textContent = authMode==='signup' ? 'Already have an account?' : 'Don't have an account?';
+  document.getElementById('authSwitchLink').textContent = authMode==='signup' ? 'Log In' : 'Sign Up';
   document.getElementById('authError').textContent='';
 }
 function openAuth(){ show('auth-screen'); }
@@ -402,8 +431,8 @@ async function submitAuth(){
   const name=document.getElementById('authName').value.trim();
   const errEl=document.getElementById('authError');
   errEl.textContent='';
-  if(!window.fbReady){ errEl.textContent='সংযোগ লোড হচ্ছে, একটু পর আবার চেষ্টা করুন'; return; }
-  if(!email || !pass){ errEl.textContent='ইমেইল ও পাসওয়ার্ড লিখুন'; return; }
+  if(!window.fbReady){ errEl.textContent='Connecting, please try again shortly'; return; }
+  if(!email || !pass){ errEl.textContent='Please enter email and password'; return; }
   try{
     if(authMode==='signup'){
       const cred = await window.fbAuth.createUserWithEmailAndPassword(email, pass);
@@ -413,9 +442,14 @@ async function submitAuth(){
       const cred = await window.fbAuth.signInWithEmailAndPassword(email, pass);
       currentUserName = localStorage.getItem('aw_myname_'+cred.user.uid) || email.split('@')[0];
     }
+    try{
+      await window.fbDb.collection('users').doc(window.fbAuth.currentUser.uid).set({
+        name: currentUserName, email: email, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, {merge:true});
+    }catch(e){ /* profile save failed, non-critical */ }
     backToMain(); setNav('profile');
   }catch(e){
-    errEl.textContent = 'সমস্যা: ' + (e.message || e.code || 'আবার চেষ্টা করুন');
+    errEl.textContent = 'Error: ' + (e.message || e.code || 'please try again');
   }
 }
 function doLogout(){ if(window.fbAuth) window.fbAuth.signOut(); renderProfile(); backToMain(); }
@@ -447,13 +481,14 @@ async function loadSharedPosts(){
 }
 
 function openDetail(item){
+  const tagText = item.shared ? 'Live post — visible to everyone' : 'Demo listing — not real';
   document.getElementById('detailBody').innerHTML=`
-    <div class="demo-tag">ডেমো লিস্টিং — বাস্তব নয়</div>
+    <div class="demo-tag">${tagText}</div>
     <div class="detail-thumb">${item.icon}</div>
     <div class="detail-title">${item.title}</div>
     <div class="detail-price">${item.price}</div>
     <div class="detail-desc">${item.desc}</div>
-    <button class="contact-btn" onclick="alert('মেসেজিং ফিচার পরের ধাপে যুক্ত হবে (ডেমো)')">যোগাযোগ করুন</button>`;
+    <button class="contact-btn" onclick="alert('Messaging feature coming in the next step (demo)')">Contact</button>`;
   show('detail');
 }
 
@@ -463,6 +498,7 @@ function setNav(target){
   if(target==='search'){ show('main'); renderList();
     document.querySelectorAll('#main .nav-item')[0].classList.add('active');
   } else if(target==='jobs'){ show('jobs-screen'); renderMyPosts(); }
+  else if(target==='connect'){ show('connect-screen'); renderConnect(); }
   else if(target==='messages'){ show('messages-screen'); }
   else if(target==='profile'){ show('profile-screen'); renderProfile(); }
 }
@@ -471,14 +507,49 @@ function renderProfile(){
   const wrap=document.getElementById('accountList');
   if(currentUser){
     document.getElementById('activeName').textContent = currentUserName;
-    document.getElementById('activeSub').textContent = (currentUser.email||'') + ' · লগইন করা আছে';
+    document.getElementById('activeSub').textContent = (currentUser.email||'') + ' · Logged in';
     document.getElementById('activeAvatar').textContent = currentUserName.charAt(0).toUpperCase();
     wrap.innerHTML = '<div class="account-chip"><div class="avatar">'+currentUserName.charAt(0).toUpperCase()+'</div><div><div class="chip-name">'+currentUserName+'</div><div class="chip-sub">'+(currentUser.email||'')+'</div></div><div class="active-dot"></div></div>';
   } else {
-    document.getElementById('activeName').textContent = 'লগইন করা নেই';
-    document.getElementById('activeSub').textContent = 'পোস্ট করতে বা প্রোফাইল দেখতে লগইন করুন';
+    document.getElementById('activeName').textContent = 'Not logged in';
+    document.getElementById('activeSub').textContent = 'Log in to post or view your profile';
     document.getElementById('activeAvatar').textContent = '?';
     wrap.innerHTML = '';
+  }
+}
+
+async function renderConnect(){
+  const nameEl=document.getElementById('connectMyName');
+  const subEl=document.getElementById('connectMySub');
+  const avEl=document.getElementById('connectMyAvatar');
+  if(currentUser){
+    nameEl.textContent = currentUserName;
+    subEl.textContent = currentUser.email || '';
+    avEl.textContent = currentUserName.charAt(0).toUpperCase();
+  } else {
+    nameEl.textContent = 'Not logged in';
+    subEl.textContent = 'Log in to appear here and connect with others';
+    avEl.textContent = '?';
+  }
+  const listEl=document.getElementById('connectList');
+  listEl.innerHTML = '<div class="empty-state"><div class="big">⏳</div><div class="title">Loading people…</div></div>';
+  try{
+    const snap = await window.fbDb.collection('users').limit(50).get();
+    const people = snap.docs.map(function(d){ const v=d.data(); v.id=d.id; return v; })
+      .filter(function(p){ return !currentUser || p.id!==currentUser.uid; });
+    if(people.length===0){
+      listEl.innerHTML = '<div class="empty-state"><div class="big">🧑‍🤝‍🧑</div><div class="title">No one here yet</div><div>Be the first — invite friends to join AgoraWorks</div></div>';
+      return;
+    }
+    listEl.innerHTML='';
+    people.forEach(function(p){
+      const row=document.createElement('div');
+      row.className='account-chip';
+      row.innerHTML='<div class="avatar">'+(p.name||'?').charAt(0).toUpperCase()+'</div><div style="flex:1;"><div class="chip-name">'+(p.name||'User')+'</div><div class="chip-sub">'+(p.email||'')+'</div></div><button class="add-account-btn" style="margin:0; width:auto; padding:8px 14px; font-size:12px;" onclick="alert(\'Friend requests are coming in the next step!\')">+ Add</button>';
+      listEl.appendChild(row);
+    });
+  }catch(e){
+    listEl.innerHTML = '<div class="empty-state"><div class="big">⚠️</div><div class="title">Could not load people</div><div>Please check your connection and try again</div></div>';
   }
 }
 
