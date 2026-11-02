@@ -246,6 +246,10 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
       <div class="avatar" id="connectMyAvatar" style="width:44px;height:44px;font-size:16px;">?</div>
       <div><div class="chip-name" id="connectMyName">Not logged in</div><div class="chip-sub" id="connectMySub">Log in to appear here and connect with others</div></div>
     </div>
+    <div id="requestsSection" style="display:none;">
+      <div class="section-label">Friend Requests</div>
+      <div id="requestsList"></div>
+    </div>
     <div class="section-label">People on AgoraWorks</div>
     <div class="list" id="connectList" style="padding-top:0;"></div>
     <div class="bottomnav">
@@ -420,7 +424,7 @@ function toggleAuthMode(){
   document.getElementById('authNameWrap').style.display = authMode==='signup' ? 'block':'none';
   document.getElementById('authTitle').textContent = authMode==='signup' ? 'Sign Up' : 'Log In';
   document.getElementById('authSubmitBtn').textContent = authMode==='signup' ? 'Create Account' : 'Log In';
-  document.getElementById('authSwitchText').textContent = authMode==='signup' ? 'Already have an account?' : 'Don't have an account?';
+  document.getElementById('authSwitchText').textContent = authMode==='signup' ? 'Already have an account?' : "Don't have an account?";
   document.getElementById('authSwitchLink').textContent = authMode==='signup' ? 'Log In' : 'Sign Up';
   document.getElementById('authError').textContent='';
 }
@@ -518,6 +522,82 @@ function renderProfile(){
   }
 }
 
+let myOutgoing=[], myIncoming=[], cachedPeople=[];
+
+async function loadMyConnections(){
+  if(!currentUser){ myOutgoing=[]; myIncoming=[]; return; }
+  try{
+    const outSnap = await window.fbDb.collection('friendRequests').where('fromUid','==',currentUser.uid).get();
+    const inSnap = await window.fbDb.collection('friendRequests').where('toUid','==',currentUser.uid).get();
+    myOutgoing = outSnap.docs.map(function(d){ const v=d.data(); v.id=d.id; return v; });
+    myIncoming = inSnap.docs.map(function(d){ const v=d.data(); v.id=d.id; return v; });
+  }catch(e){ myOutgoing=[]; myIncoming=[]; }
+}
+
+function connectionStatusWith(uid){
+  const out = myOutgoing.find(function(r){return r.toUid===uid;});
+  if(out) return out.status==='accepted' ? 'friends' : (out.status==='pending' ? 'pending' : null);
+  const inc = myIncoming.find(function(r){return r.fromUid===uid;});
+  if(inc) return inc.status==='accepted' ? 'friends' : (inc.status==='pending' ? 'incoming' : null);
+  return null;
+}
+
+async function sendFriendRequest(toUid, toName){
+  if(!currentUser){ openAuth(); return; }
+  try{
+    await window.fbDb.collection('friendRequests').add({
+      fromUid: currentUser.uid, fromName: currentUserName, toUid: toUid, toName: toName,
+      status:'pending', createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await loadMyConnections();
+    renderConnectList(); renderRequestsSection();
+  }catch(e){ alert('Could not send request: '+(e.message||e.code)); }
+}
+
+async function respondRequest(reqId, accept){
+  try{
+    await window.fbDb.collection('friendRequests').doc(reqId).update({status: accept?'accepted':'declined'});
+    await loadMyConnections();
+    renderRequestsSection(); renderConnectList();
+  }catch(e){ alert('Action failed: '+(e.message||e.code)); }
+}
+
+function renderRequestsSection(){
+  const wrap=document.getElementById('requestsSection');
+  const list=document.getElementById('requestsList');
+  const pending = myIncoming.filter(function(r){return r.status==='pending';});
+  if(!currentUser || pending.length===0){ wrap.style.display='none'; return; }
+  wrap.style.display='block';
+  list.innerHTML='';
+  pending.forEach(function(r){
+    const row=document.createElement('div');
+    row.className='account-chip';
+    row.innerHTML='<div class="avatar">'+(r.fromName||'?').charAt(0).toUpperCase()+'</div><div style="flex:1;"><div class="chip-name">'+(r.fromName||'User')+'</div><div class="chip-sub">wants to connect</div></div><div style="display:flex; gap:6px;"><button class="add-account-btn" style="margin:0; width:auto; padding:7px 12px; font-size:12px;" onclick="respondRequest(\''+r.id+'\', true)">Accept</button><button class="add-account-btn" style="margin:0; width:auto; padding:7px 12px; font-size:12px; color:var(--muted); border-color:var(--border);" onclick="respondRequest(\''+r.id+'\', false)">Decline</button></div>';
+    list.appendChild(row);
+  });
+}
+
+function renderConnectList(){
+  const listEl=document.getElementById('connectList');
+  if(cachedPeople.length===0){
+    listEl.innerHTML = '<div class="empty-state"><div class="big">🧑‍🤝‍🧑</div><div class="title">No one here yet</div><div>Be the first — invite friends to join AgoraWorks</div></div>';
+    return;
+  }
+  listEl.innerHTML='';
+  cachedPeople.forEach(function(p){
+    const status = currentUser ? connectionStatusWith(p.id) : null;
+    let btnHtml;
+    if(status==='friends') btnHtml='<span style="color:var(--teal); font-size:12px; font-weight:600;">✓ Friends</span>';
+    else if(status==='pending') btnHtml='<span style="color:var(--muted); font-size:12px;">Pending</span>';
+    else if(status==='incoming') btnHtml='<span style="color:var(--muted); font-size:12px;">Check requests ↑</span>';
+    else btnHtml='<button class="add-account-btn" style="margin:0; width:auto; padding:8px 14px; font-size:12px;" onclick="sendFriendRequest(\''+p.id+'\', \''+(p.name||'User').replace(/'/g,"")+'\')">+ Add</button>';
+    const row=document.createElement('div');
+    row.className='account-chip';
+    row.innerHTML='<div class="avatar">'+(p.name||'?').charAt(0).toUpperCase()+'</div><div style="flex:1;"><div class="chip-name">'+(p.name||'User')+'</div><div class="chip-sub">'+(p.email||'')+'</div></div>'+btnHtml;
+    listEl.appendChild(row);
+  });
+}
+
 async function renderConnect(){
   const nameEl=document.getElementById('connectMyName');
   const subEl=document.getElementById('connectMySub');
@@ -531,25 +611,16 @@ async function renderConnect(){
     subEl.textContent = 'Log in to appear here and connect with others';
     avEl.textContent = '?';
   }
-  const listEl=document.getElementById('connectList');
-  listEl.innerHTML = '<div class="empty-state"><div class="big">⏳</div><div class="title">Loading people…</div></div>';
+  document.getElementById('connectList').innerHTML = '<div class="empty-state"><div class="big">⏳</div><div class="title">Loading people…</div></div>';
   try{
+    await loadMyConnections();
     const snap = await window.fbDb.collection('users').limit(50).get();
-    const people = snap.docs.map(function(d){ const v=d.data(); v.id=d.id; return v; })
+    cachedPeople = snap.docs.map(function(d){ const v=d.data(); v.id=d.id; return v; })
       .filter(function(p){ return !currentUser || p.id!==currentUser.uid; });
-    if(people.length===0){
-      listEl.innerHTML = '<div class="empty-state"><div class="big">🧑‍🤝‍🧑</div><div class="title">No one here yet</div><div>Be the first — invite friends to join AgoraWorks</div></div>';
-      return;
-    }
-    listEl.innerHTML='';
-    people.forEach(function(p){
-      const row=document.createElement('div');
-      row.className='account-chip';
-      row.innerHTML='<div class="avatar">'+(p.name||'?').charAt(0).toUpperCase()+'</div><div style="flex:1;"><div class="chip-name">'+(p.name||'User')+'</div><div class="chip-sub">'+(p.email||'')+'</div></div><button class="add-account-btn" style="margin:0; width:auto; padding:8px 14px; font-size:12px;" onclick="alert(\'Friend requests are coming in the next step!\')">+ Add</button>';
-      listEl.appendChild(row);
-    });
+    renderRequestsSection();
+    renderConnectList();
   }catch(e){
-    listEl.innerHTML = '<div class="empty-state"><div class="big">⚠️</div><div class="title">Could not load people</div><div>Please check your connection and try again</div></div>';
+    document.getElementById('connectList').innerHTML = '<div class="empty-state"><div class="big">⚠️</div><div class="title">Could not load people</div><div>Please check your connection and try again</div></div>';
   }
 }
 
