@@ -13,6 +13,12 @@
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-firestore-compat.js"></script>
 <script>
+  window.onerror = function(msg, src, line, col, err){
+    alert('DEBUG ERROR:\n' + msg + '\nLine: ' + line + ':' + col);
+    return false;
+  };
+</script>
+<script>
   const firebaseConfig = {
     apiKey: "AIzaSyANBhqfmSnYWrUmNXxRemfdrXLjIijN3fg",
     authDomain: "agora-works.firebaseapp.com",
@@ -112,6 +118,29 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
   border-radius:6px; padding:1px 6px; margin-bottom:8px;
 }
 
+/* ---- Create Listing ---- */
+.type-card{
+  background:var(--card); border:1px solid var(--border); border-radius:14px; padding:14px;
+  margin-bottom:10px; cursor:pointer; display:flex; gap:12px; align-items:center;
+}
+.type-card:active{border-color:var(--teal);}
+.type-card .ticon{font-size:24px; flex-shrink:0;}
+.type-card .tname{font-size:14.5px; font-weight:600;}
+.type-card .tdesc{font-size:12px; color:var(--muted); margin-top:2px;}
+.field-group{margin-bottom:14px;}
+.field-label{font-size:12.5px; color:var(--muted); margin-bottom:6px; font-weight:600;}
+.field-input, .field-textarea{
+  width:100%; background:var(--card); border:1px solid var(--border); border-radius:10px;
+  padding:11px 13px; color:var(--text); font-size:14px; font-family:inherit; box-sizing:border-box;
+}
+.field-textarea{min-height:80px; resize:vertical;}
+.field-error{color:#ff6b6b; font-size:11.5px; margin-top:4px;}
+.step-indicator{font-size:12px; color:var(--muted); margin-bottom:14px;}
+.submit-btn{
+  width:100%; padding:14px; border-radius:12px; border:none; background:var(--teal);
+  color:#05211f; font-weight:700; font-size:14.5px; cursor:pointer; font-family:inherit; margin-top:6px;
+}
+
 /* ---- Bottom nav ---- */
 .bottomnav{
   position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:430px;
@@ -181,7 +210,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
       <button class="entry-btn" onclick="enterApp('work')"><span class="entry-icon">🧰</span>Find Work</button>
       <button class="entry-btn" onclick="enterApp('work')"><span class="entry-icon">📋</span>Hire Talent</button>
     </div>
-    <div class="demo-note">This is a demo prototype — all data is sample, not real transactions</div>
+    <div class="demo-note">Real accounts, real posts, real connections — some listings are sample demo data</div>
   </div>
 
   <!-- MAIN (search/listing) -->
@@ -227,7 +256,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
   <!-- MY POSTS -->
   <div class="screen" id="jobs-screen">
     <div class="topbar"><h1>My Posts</h1><button class="back-btn" onclick="backToMain()">Back</button></div>
-    <div style="padding:14px 18px 0;"><button class="add-account-btn" style="margin:0; width:100%;" onclick="startPost()">+ Add New Post</button></div>
+    <div style="padding:14px 18px 0;"><button class="add-account-btn" style="margin:0; width:100%;" onclick="openCreateFlow()">+ Add New Post</button></div>
     <div class="list" id="myPostsArea" style="flex:1;"></div>
     <div class="bottomnav">
       <button class="nav-item" onclick="setNav('search')"><span class="nav-icon">🔍</span>Search</button>
@@ -236,6 +265,12 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
       <button class="nav-item" onclick="setNav('messages')"><span class="nav-icon">💬</span>Messages</button>
       <button class="nav-item" onclick="setNav('profile')"><span class="nav-icon">👤</span>Profile</button>
     </div>
+  </div>
+
+  <!-- CREATE LISTING -->
+  <div class="screen" id="create-screen">
+    <div class="topbar"><h1 id="createTitle">New Listing</h1><button class="back-btn" onclick="createBack()">Back</button></div>
+    <div id="createBody" style="padding:14px 18px;"></div>
   </div>
 
   <!-- CONNECT -->
@@ -330,6 +365,12 @@ const SHOP_DATA=[
   {icon:'📚',title:'Used Book Collection',meta:['Books','Used'],price:'৳60',desc:'Old books in good condition (demo product).'},
 ];
 
+function escapeHTML(str){
+  if(str===null || str===undefined) return '';
+  return String(str).replace(/[&<>"']/g, function(ch){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];
+  });
+}
 let state={zone:'work', nav:'search'};
 let myPosts = JSON.parse(localStorage.getItem('aw_posts')||'[]');
 function savePosts(){ try{ localStorage.setItem('aw_posts', JSON.stringify(myPosts)); }catch(e){} }
@@ -372,27 +413,137 @@ function renderList(){
     card.className='card';
     card.onclick=function(){openDetail(item);};
     const tag = item.shared ? 'Live' : 'Demo';
-    const metaText = item.shared ? (item.zone==='work'?'Work Zone':'Shop Zone') : item.meta.join(' · ');
-    card.innerHTML='<div class="thumb">'+item.icon+'</div><div class="card-body"><div class="demo-tag">'+tag+'</div><div class="card-title">'+item.title+'</div><div class="card-meta"><span>'+metaText+'</span></div></div><div class="price">'+item.price+'</div>';
+    const metaText = item.shared ? (item.categoryName || (item.zone==='work'?'Work Zone':'Shop Zone')) : item.meta.join(' · ');
+    card.innerHTML='<div class="thumb">'+escapeHTML(item.icon)+'</div><div class="card-body"><div class="demo-tag">'+tag+'</div><div class="card-title">'+escapeHTML(item.title)+'</div><div class="card-meta"><span>'+escapeHTML(metaText)+'</span></div></div><div class="price">'+escapeHTML(item.price)+'</div>';
     list.appendChild(card);
   });
 }
 
-async function startPost(){
+const LISTING_TYPES=[
+  {id:'freelance', name:'Freelance Service', icon:'🧑‍💻', desc:'Offer a skill or service to clients', zone:'work'},
+  {id:'job', name:'Job / Project', icon:'📋', desc:'Post a job or project to hire someone', zone:'work'},
+  {id:'physical', name:'Physical Product', icon:'📦', desc:'Sell a physical item', zone:'shop'},
+  {id:'digital', name:'Digital Product', icon:'💾', desc:'Sell a digital item or file', zone:'shop'},
+  {id:'showroom', name:'Showroom Product', icon:'🏬', desc:'List a product from your shop or showroom', zone:'shop'},
+  {id:'wholesale', name:'Wholesale / Industrial', icon:'🏭', desc:'Bulk or industrial product listing', zone:'shop'},
+  {id:'bizservice', name:'Business Service', icon:'🏢', desc:'Offer a service from your business', zone:'work'}
+];
+const CATEGORIES={
+  'Design & Creative':['Logo Design','Brand Identity','Graphic Design','UI/UX Design','Illustration','3D Design','Presentation Design'],
+  'Video, Audio & Music':['Video Editing','Animation','Motion Graphics','Voice Over','Music Production','Sound Design'],
+  'Writing & Translation':['Content Writing','Copywriting','Translation','Editing & Proofreading','Technical Writing'],
+  'Programming & Technology':['Website Development','Mobile App Development','Software Development','AI Development','Automation','Database Services','Technical Support'],
+  'AI & Automation':['AI Model Development','Chatbots','Workflow Automation','Data Processing'],
+  'Digital Marketing':['SEO','Social Media Marketing','Content Marketing','Paid Advertising','Email Marketing'],
+  'Business & Consulting':['Business Planning','Market Research','Management Consulting','Legal Consulting'],
+  'Finance & Accounting':['Bookkeeping','Accounting Support','Financial Reporting','Business Finance Support'],
+  'Agriculture':['Agricultural Products','Farming Services','Agricultural Equipment','Seeds & Supplies','Consulting'],
+  'Education & Training':['Tutoring','Course Creation','Corporate Training','Language Teaching'],
+  'Personal & Local Services':['Home Services','Event Services','Beauty & Wellness','Repair Services'],
+  'Products & Shopping':['Fashion','Electronics','Home & Living','Beauty Products'],
+  'Digital Products':['Templates','E-books','Software / Apps','Courses'],
+  'Showroom & Retail':['Retail Store Items','Showroom Display Items'],
+  'Wholesale & Industrial':['Bulk Goods','Industrial Equipment','Raw Materials'],
+  'Other Services':['General Services','Miscellaneous']
+};
+const FIELD_CONFIG={
+  freelance:[{k:'priceField',label:'Starting Price (৳)',type:'text',ph:'e.g. 1000'},{k:'skills',label:'Skills',type:'text',ph:'e.g. Photoshop, Illustrator'},{k:'deliveryTime',label:'Delivery Time',type:'text',ph:'e.g. 3 days'}],
+  job:[{k:'priceField',label:'Budget (৳)',type:'text',ph:'e.g. 5000'},{k:'deadline',label:'Deadline',type:'text',ph:'e.g. 2026-12-01'},{k:'skills',label:'Required Skills',type:'text',ph:'e.g. React, Node.js'}],
+  physical:[{k:'priceField',label:'Price (৳)',type:'text',ph:'e.g. 500'},{k:'quantity',label:'Quantity',type:'text',ph:'e.g. 10'},{k:'condition',label:'Condition',type:'text',ph:'New / Used'},{k:'shipping',label:'Shipping Info',type:'text',ph:'e.g. Inside Dhaka only'}],
+  digital:[{k:'priceField',label:'Price (৳)',type:'text',ph:'e.g. 300'},{k:'deliveryInfo',label:'Delivery Info',type:'text',ph:'e.g. Instant download link'}],
+  showroom:[{k:'businessName',label:'Business / Shop Name',type:'text',ph:'e.g. Anik Fashion House'},{k:'priceField',label:'Price (৳)',type:'text',ph:'e.g. 800'},{k:'stock',label:'Stock Available',type:'text',ph:'e.g. 25 pieces'}],
+  wholesale:[{k:'priceField',label:'Bulk Price (৳)',type:'text',ph:'e.g. 200 per unit'},{k:'minOrderQty',label:'Minimum Order Quantity',type:'text',ph:'e.g. 100 units'},{k:'specifications',label:'Specifications',type:'text',ph:'e.g. Size, material, grade'}],
+  bizservice:[{k:'priceField',label:'Pricing',type:'text',ph:'e.g. Starts at ৳2000'},{k:'serviceArea',label:'Service Area',type:'text',ph:'e.g. Dhaka & nearby'},{k:'contactMethod',label:'Preferred Contact Method',type:'text',ph:'e.g. Phone call'}]
+};
+let createState={step:'type', type:null, category:null, subcategory:null};
+
+function openCreateFlow(){
   if(!currentUser){ alert('Please log in first to post'); openAuth(); return; }
-  const zone = confirm('Is this a Work Zone post? (OK = Work, Cancel = Shop)') ? 'work' : 'shop';
-  const title = prompt('Enter post title:');
-  if(!title) return;
-  const price = prompt('Enter price (e.g. 500):') || 'Negotiable';
-  const desc = prompt('Enter a short description:') || '';
-  const post = {icon: zone==='work'?'🧰':'🛍️', title:title, meta:['Post'], price: price.indexOf('৳')===0?price:'৳'+price, desc:desc, zone:zone, ownerId:currentUser.uid, ownerName:currentUserName};
+  createState={step:'type', type:null, category:null, subcategory:null};
+  show('create-screen');
+  renderCreateStep();
+}
+function createBack(){
+  if(createState.step==='category'){ createState.step='type'; renderCreateStep(); }
+  else if(createState.step==='subcategory'){ createState.step='category'; renderCreateStep(); }
+  else if(createState.step==='form'){ createState.step='subcategory'; renderCreateStep(); }
+  else { setNav('jobs'); }
+}
+function renderCreateStep(){
+  const body=document.getElementById('createBody');
+  const titleEl=document.getElementById('createTitle');
+  if(createState.step==='type'){
+    titleEl.textContent='New Listing';
+    body.innerHTML='<div class="step-indicator">Step 1 of 4 · Choose a listing type</div>';
+    LISTING_TYPES.forEach(function(t){
+      const c=document.createElement('div'); c.className='type-card';
+      c.innerHTML='<div class="ticon">'+t.icon+'</div><div><div class="tname">'+escapeHTML(t.name)+'</div><div class="tdesc">'+escapeHTML(t.desc)+'</div></div>';
+      c.onclick=function(){ createState.type=t; createState.step='category'; renderCreateStep(); };
+      body.appendChild(c);
+    });
+  } else if(createState.step==='category'){
+    titleEl.textContent=createState.type.name;
+    body.innerHTML='<div class="step-indicator">Step 2 of 4 · Choose a category</div>';
+    Object.keys(CATEGORIES).forEach(function(cat){
+      const r=document.createElement('div'); r.className='row';
+      r.innerHTML='<span>'+escapeHTML(cat)+'</span><span class="arrow">›</span>';
+      r.onclick=function(){ createState.category=cat; createState.step='subcategory'; renderCreateStep(); };
+      body.appendChild(r);
+    });
+  } else if(createState.step==='subcategory'){
+    titleEl.textContent=createState.category;
+    body.innerHTML='<div class="step-indicator">Step 3 of 4 · Choose a subcategory</div>';
+    CATEGORIES[createState.category].forEach(function(sub){
+      const r=document.createElement('div'); r.className='row';
+      r.innerHTML='<span>'+escapeHTML(sub)+'</span><span class="arrow">›</span>';
+      r.onclick=function(){ createState.subcategory=sub; createState.step='form'; renderCreateStep(); };
+      body.appendChild(r);
+    });
+  } else if(createState.step==='form'){
+    titleEl.textContent='Listing Details';
+    const extra=FIELD_CONFIG[createState.type.id]||[];
+    let html='<div class="step-indicator">Step 4 of 4 · '+escapeHTML(createState.category)+' › '+escapeHTML(createState.subcategory)+'</div>';
+    html+=field('title','Listing Title','text','e.g. Logo design for a cafe brand');
+    html+=field('desc','Description','textarea','Describe what you are offering or selling');
+    extra.forEach(function(f){ html+=field(f.k, f.label, f.type, f.ph); });
+    html+=field('country','Country','text','e.g. Bangladesh');
+    html+=field('city','City / Region','text','e.g. Dhaka');
+    html+='<div id="formError" class="field-error"></div><button class="submit-btn" onclick="submitListing()">Publish Listing</button>';
+    body.innerHTML=html;
+  }
+}
+function field(key,label,type,ph){
+  const input = type==='textarea'
+    ? '<textarea class="field-textarea" id="cf_'+key+'" placeholder="'+escapeHTML(ph)+'"></textarea>'
+    : '<input class="field-input" id="cf_'+key+'" type="text" placeholder="'+escapeHTML(ph)+'">';
+  return '<div class="field-group"><div class="field-label">'+escapeHTML(label)+'</div>'+input+'</div>';
+}
+async function submitListing(){
+  const title=(document.getElementById('cf_title').value||'').trim();
+  const desc=(document.getElementById('cf_desc').value||'').trim();
+  if(!title || !desc){ document.getElementById('formError').textContent='Title and description are required.'; return; }
+  const extra=FIELD_CONFIG[createState.type.id]||[];
+  const extraData={};
+  extra.forEach(function(f){ extraData[f.k]=(document.getElementById('cf_'+f.k).value||'').trim(); });
+  const country=(document.getElementById('cf_country').value||'').trim();
+  const city=(document.getElementById('cf_city').value||'').trim();
+  let priceDisplay = extraData.priceField || 'Negotiable';
+  if(priceDisplay && priceDisplay.charAt(0)!=='৳' && /\d/.test(priceDisplay) && !/[a-zA-Z]/.test(priceDisplay.replace(/per|unit/gi,''))) priceDisplay='৳'+priceDisplay;
+  const post={
+    icon: createState.type.icon, title:title, price:priceDisplay, desc:desc, zone:createState.type.zone,
+    listingType:createState.type.id, listingTypeName:createState.type.name,
+    category:createState.category, subcategory:createState.subcategory, categoryName:createState.category+' · '+createState.subcategory,
+    country:country, city:city, extra:extraData,
+    ownerId:currentUser.uid, ownerName:currentUserName
+  };
   try{
-    const withTime = Object.assign({}, post, {createdAt: firebase.firestore.FieldValue.serverTimestamp()});
+    const withTime=Object.assign({}, post, {createdAt: firebase.firestore.FieldValue.serverTimestamp()});
     await window.fbDb.collection('posts').add(withTime);
     await loadSharedPosts();
     alert('Posted! Everyone can see it now.');
+    setNav('jobs');
   }catch(e){
-    alert('Failed to post: ' + (e.message||e.code));
+    document.getElementById('formError').textContent='Failed to post: '+(e.message||e.code);
   }
 }
 function renderMyPosts(){
@@ -408,7 +559,7 @@ function renderMyPosts(){
     const card=document.createElement('div');
     card.className='card';
     card.onclick=function(){openDetail(item);};
-    card.innerHTML='<div class="thumb">'+item.icon+'</div><div class="card-body"><div class="demo-tag">Live</div><div class="card-title">'+item.title+'</div><div class="card-meta"><span>'+(item.zone==='work'?'Work Zone':'Shop Zone')+'</span></div></div><div class="price">'+item.price+'</div>';
+    card.innerHTML='<div class="thumb">'+escapeHTML(item.icon)+'</div><div class="card-body"><div class="demo-tag">Live</div><div class="card-title">'+escapeHTML(item.title)+'</div><div class="card-meta"><span>'+(item.zone==='work'?'Work Zone':'Shop Zone')+'</span></div></div><div class="price">'+escapeHTML(item.price)+'</div>';
     wrap.appendChild(card);
   });
 }
@@ -486,12 +637,21 @@ async function loadSharedPosts(){
 
 function openDetail(item){
   const tagText = item.shared ? 'Live post — visible to everyone' : 'Demo listing — not real';
+  let extraHtml='';
+  if(item.categoryName) extraHtml += '<div class="field-label" style="margin-top:12px;">'+escapeHTML(item.listingTypeName||'')+' · '+escapeHTML(item.categoryName)+'</div>';
+  if(item.country || item.city) extraHtml += '<div class="field-label">'+escapeHTML([item.city,item.country].filter(Boolean).join(', '))+'</div>';
+  if(item.extra){
+    Object.keys(item.extra).forEach(function(k){
+      if(item.extra[k] && k!=='priceField') extraHtml += '<div class="field-label" style="margin-top:6px;">'+escapeHTML(k)+': <span style="color:var(--text);">'+escapeHTML(item.extra[k])+'</span></div>';
+    });
+  }
   document.getElementById('detailBody').innerHTML=`
     <div class="demo-tag">${tagText}</div>
-    <div class="detail-thumb">${item.icon}</div>
-    <div class="detail-title">${item.title}</div>
-    <div class="detail-price">${item.price}</div>
-    <div class="detail-desc">${item.desc}</div>
+    <div class="detail-thumb">${escapeHTML(item.icon)}</div>
+    <div class="detail-title">${escapeHTML(item.title)}</div>
+    <div class="detail-price">${escapeHTML(item.price)}</div>
+    <div class="detail-desc">${escapeHTML(item.desc)}</div>
+    ${extraHtml}
     <button class="contact-btn" onclick="alert('Messaging feature coming in the next step (demo)')">Contact</button>`;
   show('detail');
 }
@@ -513,7 +673,7 @@ function renderProfile(){
     document.getElementById('activeName').textContent = currentUserName;
     document.getElementById('activeSub').textContent = (currentUser.email||'') + ' · Logged in';
     document.getElementById('activeAvatar').textContent = currentUserName.charAt(0).toUpperCase();
-    wrap.innerHTML = '<div class="account-chip"><div class="avatar">'+currentUserName.charAt(0).toUpperCase()+'</div><div><div class="chip-name">'+currentUserName+'</div><div class="chip-sub">'+(currentUser.email||'')+'</div></div><div class="active-dot"></div></div>';
+    wrap.innerHTML = '<div class="account-chip"><div class="avatar">'+escapeHTML(currentUserName.charAt(0).toUpperCase())+'</div><div><div class="chip-name">'+escapeHTML(currentUserName)+'</div><div class="chip-sub">'+escapeHTML(currentUser.email||'')+'</div></div><div class="active-dot"></div></div>';
   } else {
     document.getElementById('activeName').textContent = 'Not logged in';
     document.getElementById('activeSub').textContent = 'Log in to post or view your profile';
@@ -572,7 +732,7 @@ function renderRequestsSection(){
   pending.forEach(function(r){
     const row=document.createElement('div');
     row.className='account-chip';
-    row.innerHTML='<div class="avatar">'+(r.fromName||'?').charAt(0).toUpperCase()+'</div><div style="flex:1;"><div class="chip-name">'+(r.fromName||'User')+'</div><div class="chip-sub">wants to connect</div></div><div style="display:flex; gap:6px;"><button class="add-account-btn" style="margin:0; width:auto; padding:7px 12px; font-size:12px;" onclick="respondRequest(\''+r.id+'\', true)">Accept</button><button class="add-account-btn" style="margin:0; width:auto; padding:7px 12px; font-size:12px; color:var(--muted); border-color:var(--border);" onclick="respondRequest(\''+r.id+'\', false)">Decline</button></div>';
+    row.innerHTML='<div class="avatar">'+escapeHTML((r.fromName||'?').charAt(0).toUpperCase())+'</div><div style="flex:1;"><div class="chip-name">'+escapeHTML(r.fromName||'User')+'</div><div class="chip-sub">wants to connect</div></div><div style="display:flex; gap:6px;"><button class="add-account-btn" style="margin:0; width:auto; padding:7px 12px; font-size:12px;" onclick="respondRequest(\''+r.id+'\', true)">Accept</button><button class="add-account-btn" style="margin:0; width:auto; padding:7px 12px; font-size:12px; color:var(--muted); border-color:var(--border);" onclick="respondRequest(\''+r.id+'\', false)">Decline</button></div>';
     list.appendChild(row);
   });
 }
@@ -593,7 +753,7 @@ function renderConnectList(){
     else btnHtml='<button class="add-account-btn" style="margin:0; width:auto; padding:8px 14px; font-size:12px;" onclick="sendFriendRequest(\''+p.id+'\', \''+(p.name||'User').replace(/'/g,"")+'\')">+ Add</button>';
     const row=document.createElement('div');
     row.className='account-chip';
-    row.innerHTML='<div class="avatar">'+(p.name||'?').charAt(0).toUpperCase()+'</div><div style="flex:1;"><div class="chip-name">'+(p.name||'User')+'</div><div class="chip-sub">'+(p.email||'')+'</div></div>'+btnHtml;
+    row.innerHTML='<div class="avatar">'+escapeHTML((p.name||'?').charAt(0).toUpperCase())+'</div><div style="flex:1;"><div class="chip-name">'+escapeHTML(p.name||'User')+'</div><div class="chip-sub">'+escapeHTML(p.email||'')+'</div></div>'+btnHtml;
     listEl.appendChild(row);
   });
 }
