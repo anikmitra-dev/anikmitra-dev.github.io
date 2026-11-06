@@ -118,6 +118,28 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
   border-radius:6px; padding:1px 6px; margin-bottom:8px;
 }
 
+/* ---- Messaging ---- */
+.conv-row{display:flex; gap:12px; align-items:center; padding:13px 18px; border-bottom:1px solid var(--border); cursor:pointer;}
+.conv-row .avatar{width:44px; height:44px; font-size:16px; flex-shrink:0;}
+.conv-info{flex:1; min-width:0;}
+.conv-name{font-size:14px; font-weight:600;}
+.conv-preview{font-size:12.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; max-width:220px;}
+.conv-context{font-size:10.5px; color:var(--teal); margin-top:2px;}
+.conv-meta{font-size:10.5px; color:var(--muted); text-align:right; flex-shrink:0; white-space:nowrap;}
+.chat-messages{flex:1; overflow-y:auto; padding:14px 16px; display:flex; flex-direction:column; gap:8px;}
+.msg-row{display:flex;}
+.msg-row.mine{justify-content:flex-end;}
+.msg-bubble{max-width:75%; padding:9px 13px; border-radius:14px; font-size:13.5px; line-height:1.4; word-wrap:break-word;}
+.msg-row.mine .msg-bubble{background:var(--teal); color:#05211f; border-bottom-right-radius:4px;}
+.msg-row.theirs .msg-bubble{background:var(--card); border:1px solid var(--border); border-bottom-left-radius:4px;}
+.msg-time{font-size:9.5px; color:var(--muted); margin-top:3px; text-align:right;}
+.msg-row.theirs .msg-time{text-align:left;}
+.chat-context-bar{padding:9px 16px; background:var(--card); border-bottom:1px solid var(--border); font-size:11.5px; color:var(--muted);}
+.chat-input-bar{display:flex; gap:8px; padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px)); border-top:1px solid var(--border); background:var(--navy2); flex-shrink:0;}
+.chat-input-bar input{flex:1; background:var(--card); border:1px solid var(--border); border-radius:20px; padding:10px 16px; color:var(--text); font-size:14px; font-family:inherit; outline:none; min-width:0;}
+.chat-send-btn{background:var(--teal); border:none; border-radius:50%; width:40px; height:40px; color:#05211f; font-size:16px; cursor:pointer; flex-shrink:0;}
+.chat-send-btn:disabled{opacity:.5;}
+
 /* ---- Create Listing ---- */
 .type-card{
   background:var(--card); border:1px solid var(--border); border-radius:14px; padding:14px;
@@ -239,11 +261,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
   <!-- MESSAGES -->
   <div class="screen" id="messages-screen">
     <div class="topbar"><h1>Messages</h1><button class="back-btn" onclick="backToMain()">Back</button></div>
-    <div class="empty-state">
-      <div class="big">💬</div>
-      <div class="title">No messages yet</div>
-      <div>Conversations will appear here once you contact a listing (demo version)</div>
-    </div>
+    <div id="convListWrap" style="flex:1; overflow-y:auto;"></div>
     <div class="bottomnav">
       <button class="nav-item" onclick="setNav('search')"><span class="nav-icon">🔍</span>Search</button>
       <button class="nav-item" onclick="setNav('jobs')"><span class="nav-icon">📌</span>My Posts</button>
@@ -346,6 +364,17 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
   <div class="screen" id="detail">
     <div class="topbar"><h1>Details</h1><button class="back-btn" onclick="backToMain()">Back</button></div>
     <div class="detail-body" id="detailBody"></div>
+  </div>
+
+  <!-- CHAT -->
+  <div class="screen" id="chat-screen">
+    <div class="topbar"><h1 id="chatTitle">Chat</h1><button class="back-btn" onclick="closeChatScreen()">Back</button></div>
+    <div id="chatContextBar" class="chat-context-bar" style="display:none;"></div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-input-bar">
+      <input id="chatInput" type="text" placeholder="Type a message..." maxlength="2000" onkeydown="if(event.key==='Enter'){sendChatMessage();}">
+      <button class="chat-send-btn" id="chatSendBtn" onclick="sendChatMessage()">➤</button>
+    </div>
   </div>
 
 </div>
@@ -559,7 +588,8 @@ function renderMyPosts(){
     const card=document.createElement('div');
     card.className='card';
     card.onclick=function(){openDetail(item);};
-    card.innerHTML='<div class="thumb">'+escapeHTML(item.icon)+'</div><div class="card-body"><div class="demo-tag">Live</div><div class="card-title">'+escapeHTML(item.title)+'</div><div class="card-meta"><span>'+(item.zone==='work'?'Work Zone':'Shop Zone')+'</span></div></div><div class="price">'+escapeHTML(item.price)+'</div>';
+    const myMeta = item.categoryName || (item.zone==='work'?'Work Zone':'Shop Zone');
+    card.innerHTML='<div class="thumb">'+escapeHTML(item.icon)+'</div><div class="card-body"><div class="demo-tag">Live</div><div class="card-title">'+escapeHTML(item.title)+'</div><div class="card-meta"><span>'+escapeHTML(myMeta)+'</span></div></div><div class="price">'+escapeHTML(item.price)+'</div>';
     wrap.appendChild(card);
   });
 }
@@ -618,6 +648,7 @@ function initAuthWatch(){
       window.fbAuth.onAuthStateChanged(function(user){
         currentUser=user;
         if(user) currentUserName = localStorage.getItem('aw_myname_'+user.uid) || (user.email? user.email.split('@')[0]:'User');
+        else if(typeof unsubChatMessages!=='undefined' && unsubChatMessages){ unsubChatMessages(); unsubChatMessages=null; activeChat=null; }
         if(document.getElementById('profile-screen').classList.contains('active')) renderProfile();
       });
       loadSharedPosts();
@@ -635,7 +666,9 @@ async function loadSharedPosts(){
   }catch(e){ /* collection empty on first run, ignore */ }
 }
 
+let currentDetailItem=null;
 function openDetail(item){
+  currentDetailItem = item;
   const tagText = item.shared ? 'Live post — visible to everyone' : 'Demo listing — not real';
   let extraHtml='';
   if(item.categoryName) extraHtml += '<div class="field-label" style="margin-top:12px;">'+escapeHTML(item.listingTypeName||'')+' · '+escapeHTML(item.categoryName)+'</div>';
@@ -652,8 +685,163 @@ function openDetail(item){
     <div class="detail-price">${escapeHTML(item.price)}</div>
     <div class="detail-desc">${escapeHTML(item.desc)}</div>
     ${extraHtml}
-    <button class="contact-btn" onclick="alert('Messaging feature coming in the next step (demo)')">Contact</button>`;
+    <button class="contact-btn" onclick="contactSeller()">Contact</button>`;
   show('detail');
+}
+
+/* ---------- Messaging ---------- */
+let activeChat=null; // {convId, otherUid, otherName}
+let unsubChatMessages=null;
+
+function convIdFor(uidA, uidB){ return [uidA, uidB].sort().join('_'); }
+
+function timeAgoShort(date){
+  if(!date) return '';
+  const diffMs = Date.now() - date.getTime();
+  const mins = Math.floor(diffMs/60000);
+  if(mins < 1) return 'now';
+  if(mins < 60) return mins+'m';
+  const hrs = Math.floor(mins/60);
+  if(hrs < 24) return hrs+'h';
+  const days = Math.floor(hrs/24);
+  if(days < 7) return days+'d';
+  return date.toLocaleDateString();
+}
+
+function contactSeller(){
+  if(!currentUser){ alert('Please log in first to contact.'); openAuth(); return; }
+  const item = currentDetailItem;
+  if(!item || !item.shared || !item.ownerId){ alert('This is a demo listing — contacting is only available on real, live listings.'); return; }
+  if(item.ownerId === currentUser.uid){ alert("You can't message yourself — this is your own listing."); return; }
+  openChatWith(item.ownerId, item.ownerName||'User', item.id||null, item.title||'');
+}
+
+async function openChatWith(otherUid, otherName, listingId, listingTitle){
+  if(!currentUser){ openAuth(); return; }
+  if(otherUid === currentUser.uid){ alert("You can't message yourself."); return; }
+  const convId = convIdFor(currentUser.uid, otherUid);
+  activeChat = {convId: convId, otherUid: otherUid, otherName: otherName};
+  document.getElementById('chatTitle').textContent = otherName;
+  const ctxBar = document.getElementById('chatContextBar');
+  document.getElementById('chatMessages').innerHTML = '<div class="empty-state"><div class="big">⏳</div><div class="title">Loading…</div></div>';
+  show('chat-screen');
+  try{
+    const convRef = window.fbDb.collection('conversations').doc(convId);
+    const convSnap = await convRef.get();
+    if(!convSnap.exists){
+      const names={}; names[currentUser.uid]=currentUserName; names[otherUid]=otherName;
+      await convRef.set({
+        participants:[currentUser.uid, otherUid],
+        participantNames: names,
+        listingId: listingId||null, listingTitle: listingTitle||null,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        lastMessage:'', lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(), lastSenderId:null
+      });
+    }
+    const data = convSnap.exists ? convSnap.data() : null;
+    if(data && data.listingTitle){ ctxBar.style.display='block'; ctxBar.textContent='About: '+data.listingTitle; }
+    else if(listingTitle){ ctxBar.style.display='block'; ctxBar.textContent='About: '+listingTitle; }
+    else { ctxBar.style.display='none'; }
+    listenToMessages(convId);
+  }catch(e){
+    document.getElementById('chatMessages').innerHTML = '<div class="empty-state"><div class="big">⚠️</div><div class="title">Could not open chat</div><div>'+escapeHTML(e.message||'Please try again')+'</div></div>';
+  }
+}
+
+function listenToMessages(convId){
+  if(unsubChatMessages){ unsubChatMessages(); unsubChatMessages=null; }
+  const q = window.fbDb.collection('conversations').doc(convId).collection('messages').orderBy('createdAt','asc').limit(200);
+  unsubChatMessages = q.onSnapshot(function(snap){
+    const wrap=document.getElementById('chatMessages');
+    if(snap.empty){
+      wrap.innerHTML='<div class="empty-state"><div class="big">💬</div><div class="title">No messages yet</div><div>Say hello to start the conversation</div></div>';
+      return;
+    }
+    wrap.innerHTML='';
+    snap.forEach(function(doc){
+      const m=doc.data();
+      const mine = m.senderId===currentUser.uid;
+      const row=document.createElement('div');
+      row.className='msg-row '+(mine?'mine':'theirs');
+      const t = m.createdAt && m.createdAt.toDate ? m.createdAt.toDate() : null;
+      const timeStr = t ? t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : 'sending…';
+      row.innerHTML='<div><div class="msg-bubble">'+escapeHTML(m.text)+'</div><div class="msg-time">'+escapeHTML(timeStr)+'</div></div>';
+      wrap.appendChild(row);
+    });
+    wrap.scrollTop = wrap.scrollHeight;
+  }, function(err){
+    document.getElementById('chatMessages').innerHTML = '<div class="empty-state"><div class="big">⚠️</div><div class="title">Could not load messages</div><div>'+escapeHTML(err.message||'')+'</div></div>';
+  });
+}
+
+async function sendChatMessage(){
+  if(!activeChat || !currentUser) return;
+  const input=document.getElementById('chatInput');
+  const text=(input.value||'').trim();
+  if(!text) return;
+  const btn=document.getElementById('chatSendBtn');
+  btn.disabled=true; input.value='';
+  try{
+    const convRef = window.fbDb.collection('conversations').doc(activeChat.convId);
+    await convRef.collection('messages').add({
+      senderId: currentUser.uid, text: text, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await convRef.update({
+      lastMessage: text.slice(0,120), lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(), lastSenderId: currentUser.uid
+    });
+  }catch(e){
+    alert('Message failed to send: '+(e.message||e.code));
+    input.value=text;
+  }
+  btn.disabled=false;
+}
+
+function closeChatScreen(){
+  if(unsubChatMessages){ unsubChatMessages(); unsubChatMessages=null; }
+  activeChat=null;
+  setNav('messages');
+}
+
+async function loadConversations(){
+  const wrap=document.getElementById('convListWrap');
+  if(!currentUser){
+    wrap.innerHTML='<div class="empty-state"><div class="big">💬</div><div class="title">Log in to see your messages</div><div>Your conversations will appear here</div></div>';
+    return;
+  }
+  wrap.innerHTML='<div class="empty-state"><div class="big">⏳</div><div class="title">Loading…</div></div>';
+  try{
+    const snap = await window.fbDb.collection('conversations').where('participants','array-contains',currentUser.uid).get();
+    if(snap.empty){
+      wrap.innerHTML='<div class="empty-state"><div class="big">💬</div><div class="title">No messages yet</div><div>Conversations will appear here once you contact a listing</div></div>';
+      return;
+    }
+    let convs=[];
+    snap.forEach(function(doc){
+      const d=doc.data(); d.id=doc.id;
+      convs.push(d);
+    });
+    convs.sort(function(a,b){
+      const ta = a.lastMessageAt && a.lastMessageAt.toMillis ? a.lastMessageAt.toMillis() : 0;
+      const tb = b.lastMessageAt && b.lastMessageAt.toMillis ? b.lastMessageAt.toMillis() : 0;
+      return tb-ta;
+    });
+    wrap.innerHTML='';
+    convs.forEach(function(c){
+      const otherUid = c.participants.find(function(p){ return p!==currentUser.uid; });
+      const otherName = (c.participantNames && c.participantNames[otherUid]) || 'User';
+      const t = c.lastMessageAt && c.lastMessageAt.toDate ? c.lastMessageAt.toDate() : null;
+      const row=document.createElement('div'); row.className='conv-row';
+      row.innerHTML='<div class="avatar">'+escapeHTML((otherName||'?').charAt(0).toUpperCase())+'</div>'
+        +'<div class="conv-info"><div class="conv-name">'+escapeHTML(otherName)+'</div>'
+        +'<div class="conv-preview">'+escapeHTML(c.lastMessage||'Say hello 👋')+'</div>'
+        +(c.listingTitle ? '<div class="conv-context">Re: '+escapeHTML(c.listingTitle)+'</div>' : '')
+        +'</div><div class="conv-meta">'+escapeHTML(timeAgoShort(t))+'</div>';
+      row.onclick=function(){ openChatWith(otherUid, otherName, c.listingId, c.listingTitle); };
+      wrap.appendChild(row);
+    });
+  }catch(e){
+    wrap.innerHTML='<div class="empty-state"><div class="big">⚠️</div><div class="title">Could not load messages</div><div>'+escapeHTML(e.message||'Please try again')+'</div></div>';
+  }
 }
 
 function setNav(target){
@@ -663,7 +851,7 @@ function setNav(target){
     document.querySelectorAll('#main .nav-item')[0].classList.add('active');
   } else if(target==='jobs'){ show('jobs-screen'); renderMyPosts(); }
   else if(target==='connect'){ show('connect-screen'); renderConnect(); }
-  else if(target==='messages'){ show('messages-screen'); }
+  else if(target==='messages'){ show('messages-screen'); loadConversations(); }
   else if(target==='profile'){ show('profile-screen'); renderProfile(); }
 }
 
