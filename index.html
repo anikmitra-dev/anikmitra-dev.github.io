@@ -118,6 +118,27 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
   border-radius:6px; padding:1px 6px; margin-bottom:8px;
 }
 
+/* ---- Social Feed ---- */
+.composer{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:12px;}
+.composer textarea{width:100%; background:transparent; border:none; color:var(--text); font-family:inherit; font-size:13.5px; resize:none; min-height:50px; outline:none;}
+.composer-btn{float:right; background:var(--teal); color:#05211f; border:none; border-radius:16px; padding:7px 16px; font-weight:700; font-size:12.5px; cursor:pointer; font-family:inherit; margin-top:4px;}
+.feed-card{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:14px; margin-bottom:12px; cursor:pointer;}
+.feed-head{display:flex; align-items:center; gap:10px; margin-bottom:8px;}
+.feed-head .avatar{width:36px; height:36px; font-size:14px; flex-shrink:0;}
+.feed-author{font-size:13.5px; font-weight:600;}
+.feed-time{font-size:11px; color:var(--muted);}
+.feed-text{font-size:13.5px; line-height:1.5; margin-bottom:10px; white-space:pre-wrap; word-wrap:break-word;}
+.feed-actions{display:flex; gap:18px; border-top:1px solid var(--border); padding-top:8px; align-items:center;}
+.feed-action-btn{background:none; border:none; color:var(--muted); font-size:12.5px; cursor:pointer; font-family:inherit; display:flex; align-items:center; gap:5px; padding:0;}
+.feed-action-btn.liked{color:var(--teal); font-weight:700;}
+.feed-delete-btn{margin-left:auto; color:var(--danger); font-size:11.5px; background:none; border:none; cursor:pointer; font-family:inherit;}
+.comment-row{padding:9px 0; border-bottom:1px solid var(--border);}
+.comment-head{display:flex; justify-content:space-between; font-size:12px;}
+.comment-author{font-weight:600;}
+.comment-time{color:var(--muted);}
+.comment-text{font-size:13px; margin-top:3px; white-space:pre-wrap; word-wrap:break-word;}
+.comment-delete{color:var(--danger); font-size:10.5px; cursor:pointer; margin-top:4px; background:none; border:none; font-family:inherit; padding:0;}
+
 /* ---- Messaging ---- */
 .conv-row{display:flex; gap:12px; align-items:center; padding:13px 18px; border-bottom:1px solid var(--border); cursor:pointer;}
 .conv-row .avatar{width:44px; height:44px; font-size:16px; flex-shrink:0;}
@@ -303,6 +324,15 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
       <div class="section-label">Friend Requests</div>
       <div id="requestsList"></div>
     </div>
+    <div style="padding:14px 18px 0;">
+      <div class="composer">
+        <textarea id="feedComposerInput" placeholder="Share something with AgoraWorks..." maxlength="3000"></textarea>
+        <button class="composer-btn" onclick="submitFeedPost()">Post</button>
+        <div style="clear:both;"></div>
+      </div>
+    </div>
+    <div class="section-label">Feed</div>
+    <div id="feedList" style="padding:0 18px;"></div>
     <div class="section-label">People on AgoraWorks</div>
     <div class="list" id="connectList" style="padding-top:0;"></div>
     <div class="bottomnav">
@@ -374,6 +404,20 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
     <div class="chat-input-bar">
       <input id="chatInput" type="text" placeholder="Type a message..." maxlength="2000" onkeydown="if(event.key==='Enter'){sendChatMessage();}">
       <button class="chat-send-btn" id="chatSendBtn" onclick="sendChatMessage()">➤</button>
+    </div>
+  </div>
+
+  <!-- POST DETAIL -->
+  <div class="screen" id="post-detail-screen">
+    <div class="topbar"><h1>Post</h1><button class="back-btn" onclick="setNav('connect')">Back</button></div>
+    <div style="flex:1; overflow-y:auto; padding:14px 18px;">
+      <div id="postDetailCard"></div>
+      <div class="section-label">Comments</div>
+      <div id="commentsList"></div>
+    </div>
+    <div class="chat-input-bar">
+      <input id="commentInput" type="text" placeholder="Write a comment..." maxlength="1000" onkeydown="if(event.key==='Enter'){submitComment();}">
+      <button class="chat-send-btn" onclick="submitComment()">➤</button>
     </div>
   </div>
 
@@ -652,6 +696,7 @@ function initAuthWatch(){
         if(document.getElementById('profile-screen').classList.contains('active')) renderProfile();
       });
       loadSharedPosts();
+      checkFeedDeepLink();
     }
   },200);
 }
@@ -844,13 +889,179 @@ async function loadConversations(){
   }
 }
 
+/* ---------- Social Feed ---------- */
+let currentPostDetailId=null;
+
+async function submitFeedPost(){
+  if(!currentUser){ alert('Please log in first to post.'); openAuth(); return; }
+  const input=document.getElementById('feedComposerInput');
+  const text=(input.value||'').trim();
+  if(!text) return;
+  try{
+    await window.fbDb.collection('feedPosts').add({
+      authorId: currentUser.uid, authorName: currentUserName, text: text,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    input.value='';
+    loadFeed();
+  }catch(e){ alert('Failed to post: '+(e.message||e.code)); }
+}
+
+async function buildFeedCard(p){
+  const likesSnap = await window.fbDb.collection('feedPosts').doc(p.id).collection('likes').get();
+  const likeCount = likesSnap.size;
+  const likedByMe = !!(currentUser && likesSnap.docs.some(function(d){ return d.id===currentUser.uid; }));
+  const commentsSnap = await window.fbDb.collection('feedPosts').doc(p.id).collection('comments').get();
+  const commentCount = commentsSnap.size;
+  const t = p.createdAt && p.createdAt.toDate ? p.createdAt.toDate() : null;
+  const card=document.createElement('div'); card.className='feed-card';
+  card.innerHTML = '<div class="feed-head"><div class="avatar">'+escapeHTML((p.authorName||'?').charAt(0).toUpperCase())+'</div><div><div class="feed-author">'+escapeHTML(p.authorName||'User')+'</div><div class="feed-time">'+escapeHTML(timeAgoShort(t))+'</div></div></div>'
+    +'<div class="feed-text">'+escapeHTML(p.text)+'</div>'
+    +'<div class="feed-actions">'
+    +'<button class="feed-action-btn '+(likedByMe?'liked':'')+'" onclick="event.stopPropagation(); toggleLike(\''+p.id+'\', this)">'+(likedByMe?'❤️':'🤍')+' <span class="likeCountSpan">'+likeCount+'</span></button>'
+    +'<button class="feed-action-btn" onclick="event.stopPropagation(); openPostDetail(\''+p.id+'\')">💬 '+commentCount+'</button>'
+    +'<button class="feed-action-btn" onclick="event.stopPropagation(); sharePost(\''+p.id+'\')">🔗 Share</button>'
+    +(currentUser && p.authorId===currentUser.uid ? '<button class="feed-delete-btn" onclick="event.stopPropagation(); deleteFeedPost(\''+p.id+'\')">Delete</button>' : '')
+    +'</div>';
+  card.onclick=function(){ openPostDetail(p.id); };
+  return card;
+}
+
+async function loadFeed(){
+  const wrap=document.getElementById('feedList');
+  if(!wrap) return;
+  wrap.innerHTML='<div class="empty-state"><div class="big">⏳</div><div class="title">Loading…</div></div>';
+  try{
+    const snap = await window.fbDb.collection('feedPosts').orderBy('createdAt','desc').limit(50).get();
+    if(snap.empty){ wrap.innerHTML='<div class="empty-state"><div class="big">📝</div><div class="title">No posts yet</div><div>Be the first to share something</div></div>'; return; }
+    wrap.innerHTML='';
+    for(const doc of snap.docs){
+      const p=doc.data(); p.id=doc.id;
+      wrap.appendChild(await buildFeedCard(p));
+    }
+  }catch(e){
+    wrap.innerHTML='<div class="empty-state"><div class="big">⚠️</div><div class="title">Could not load feed</div><div>'+escapeHTML(e.message||'')+'</div></div>';
+  }
+}
+
+async function toggleLike(postId, btnEl){
+  if(!currentUser){ alert('Please log in to like posts.'); openAuth(); return; }
+  const likeRef = window.fbDb.collection('feedPosts').doc(postId).collection('likes').doc(currentUser.uid);
+  const isLiked = btnEl.classList.contains('liked');
+  const span = btnEl.querySelector('.likeCountSpan');
+  const oldCount = parseInt(span.textContent)||0;
+  try{
+    if(isLiked){
+      await likeRef.delete();
+      btnEl.classList.remove('liked');
+      btnEl.innerHTML = '🤍 <span class="likeCountSpan">'+Math.max(0,oldCount-1)+'</span>';
+    } else {
+      await likeRef.set({likedAt: firebase.firestore.FieldValue.serverTimestamp()});
+      btnEl.classList.add('liked');
+      btnEl.innerHTML = '❤️ <span class="likeCountSpan">'+(oldCount+1)+'</span>';
+    }
+  }catch(e){ alert('Failed: '+(e.message||e.code)); }
+}
+
+async function deleteFeedPost(postId){
+  if(!confirm('Delete this post? This cannot be undone.')) return;
+  try{
+    await window.fbDb.collection('feedPosts').doc(postId).delete();
+    loadFeed();
+  }catch(e){ alert('Failed to delete: '+(e.message||e.code)); }
+}
+
+function sharePost(postId){
+  const url = location.origin + location.pathname + '?post=' + postId;
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(function(){ alert('Link copied! Share it with anyone — opening it jumps straight to this post.'); })
+      .catch(function(){ prompt('Copy this link to share:', url); });
+  } else {
+    prompt('Copy this link to share:', url);
+  }
+}
+
+async function openPostDetail(postId){
+  currentPostDetailId = postId;
+  show('post-detail-screen');
+  document.getElementById('postDetailCard').innerHTML='<div class="empty-state"><div class="big">⏳</div><div class="title">Loading…</div></div>';
+  document.getElementById('commentsList').innerHTML='';
+  try{
+    const doc = await window.fbDb.collection('feedPosts').doc(postId).get();
+    if(!doc.exists){ document.getElementById('postDetailCard').innerHTML='<div class="empty-state"><div class="big">⚠️</div><div class="title">Post not found</div><div>It may have been deleted</div></div>'; return; }
+    const p=doc.data(); p.id=doc.id;
+    const card = await buildFeedCard(p);
+    card.onclick=null; card.style.cursor='default';
+    const wrap=document.getElementById('postDetailCard'); wrap.innerHTML=''; wrap.appendChild(card);
+    loadComments(postId);
+  }catch(e){
+    document.getElementById('postDetailCard').innerHTML='<div class="empty-state"><div class="big">⚠️</div><div class="title">Could not load post</div></div>';
+  }
+}
+
+async function loadComments(postId){
+  const wrap=document.getElementById('commentsList');
+  wrap.innerHTML='<div class="empty-state"><div class="big">⏳</div><div class="title">Loading…</div></div>';
+  try{
+    const snap = await window.fbDb.collection('feedPosts').doc(postId).collection('comments').orderBy('createdAt','asc').limit(200).get();
+    if(snap.empty){ wrap.innerHTML='<div class="empty-state"><div class="big">💬</div><div class="title">No comments yet</div><div>Be the first to comment</div></div>'; return; }
+    wrap.innerHTML='';
+    snap.forEach(function(doc){
+      const c=doc.data();
+      const t = c.createdAt && c.createdAt.toDate ? c.createdAt.toDate() : null;
+      const row=document.createElement('div'); row.className='comment-row';
+      let html = '<div class="comment-head"><span class="comment-author">'+escapeHTML(c.authorName||'User')+'</span><span class="comment-time">'+escapeHTML(timeAgoShort(t))+'</span></div>'
+        +'<div class="comment-text">'+escapeHTML(c.text)+'</div>';
+      if(currentUser && c.authorId===currentUser.uid){
+        html += '<button class="comment-delete" onclick="deleteComment(\''+postId+'\',\''+doc.id+'\')">Delete</button>';
+      }
+      row.innerHTML = html;
+      wrap.appendChild(row);
+    });
+  }catch(e){
+    wrap.innerHTML='<div class="empty-state"><div class="big">⚠️</div><div class="title">Could not load comments</div></div>';
+  }
+}
+
+async function submitComment(){
+  if(!currentUser){ alert('Please log in to comment.'); openAuth(); return; }
+  if(!currentPostDetailId) return;
+  const input=document.getElementById('commentInput');
+  const text=(input.value||'').trim();
+  if(!text) return;
+  input.value='';
+  try{
+    await window.fbDb.collection('feedPosts').doc(currentPostDetailId).collection('comments').add({
+      authorId: currentUser.uid, authorName: currentUserName, text: text,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    loadComments(currentPostDetailId);
+  }catch(e){ alert('Failed to comment: '+(e.message||e.code)); input.value=text; }
+}
+
+async function deleteComment(postId, commentId){
+  if(!confirm('Delete this comment?')) return;
+  try{
+    await window.fbDb.collection('feedPosts').doc(postId).collection('comments').doc(commentId).delete();
+    loadComments(postId);
+  }catch(e){ alert('Failed to delete: '+(e.message||e.code)); }
+}
+
+function checkFeedDeepLink(){
+  try{
+    const params = new URLSearchParams(location.search);
+    const postId = params.get('post');
+    if(postId){ openPostDetail(postId); }
+  }catch(e){}
+}
+
 function setNav(target){
   state.nav=target;
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
   if(target==='search'){ show('main'); renderList();
     document.querySelectorAll('#main .nav-item')[0].classList.add('active');
   } else if(target==='jobs'){ show('jobs-screen'); renderMyPosts(); }
-  else if(target==='connect'){ show('connect-screen'); renderConnect(); }
+  else if(target==='connect'){ show('connect-screen'); renderConnect(); loadFeed(); }
   else if(target==='messages'){ show('messages-screen'); loadConversations(); }
   else if(target==='profile'){ show('profile-screen'); renderProfile(); }
 }
