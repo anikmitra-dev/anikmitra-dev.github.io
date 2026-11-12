@@ -12,6 +12,7 @@
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-app-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-storage-compat.js"></script>
 <script>
   window.onerror = function(msg, src, line, col, err){
     alert('DEBUG ERROR:\n' + msg + '\nLine: ' + line + ':' + col);
@@ -30,6 +31,7 @@
   firebase.initializeApp(firebaseConfig);
   window.fbAuth = firebase.auth();
   window.fbDb = firebase.firestore();
+  window.fbStorage = firebase.storage();
   window.fbReady = true;
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -327,7 +329,18 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
     <div style="padding:14px 18px 0;">
       <div class="composer">
         <textarea id="feedComposerInput" placeholder="Share something with AgoraWorks..." maxlength="3000"></textarea>
-        <button class="composer-btn" onclick="submitFeedPost()">Post</button>
+        <div id="feedImagePreviewWrap" style="display:none; margin:8px 0;">
+          <img id="feedImagePreview" style="max-width:100%; border-radius:10px; display:block;">
+          <button onclick="removeFeedImage()" style="margin-top:6px; background:none; border:none; color:var(--danger); font-size:11.5px; cursor:pointer; font-family:inherit; padding:0;">Remove photo</button>
+        </div>
+        <div id="feedUploadProgressWrap" style="display:none; margin:8px 0; background:var(--border); border-radius:6px; height:6px; overflow:hidden;">
+          <div id="feedUploadProgressBar" style="height:100%; width:0%; background:var(--teal);"></div>
+        </div>
+        <div id="feedComposerError" class="field-error"></div>
+        <input type="file" id="feedImageInput" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="onFeedImageSelected(event)">
+        <!-- Photo upload temporarily disabled: requires Firebase Storage (Blaze plan), postponed by request -->
+        <button style="display:none;" onclick="document.getElementById('feedImageInput').click()">📷 Photo</button>
+        <button class="composer-btn" id="feedPostBtn" onclick="submitFeedPost()">Post</button>
         <div style="clear:both;"></div>
       </div>
     </div>
@@ -380,6 +393,8 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
       <div class="row">Skills / Services<span class="arrow">›</span></div>
       <div class="row">Seller Info<span class="arrow">›</span></div>
       <div class="row" onclick="logoutActive()">Log Out<span class="arrow" style="color:var(--danger)">›</span></div>
+      <div class="section-label">Blocked Users</div>
+      <div id="blockedUsersList" style="padding:0 18px;"></div>
     </div>
     <div class="bottomnav">
       <button class="nav-item" onclick="setNav('search')"><span class="nav-icon">🔍</span>Search</button>
@@ -685,6 +700,80 @@ function doLogout(){ if(window.fbAuth) window.fbAuth.signOut(); renderProfile();
 
 let currentUserName='';
 let currentUser=null;
+let myBlockedUids=new Set();   // people I have blocked
+let blockedMeUids=new Set();   // people who have blocked me
+
+async function loadBlockState(){
+  if(!currentUser){ myBlockedUids=new Set(); blockedMeUids=new Set(); return; }
+  try{
+    const mine = await window.fbDb.collection('blocks').where('blockerId','==',currentUser.uid).get();
+    myBlockedUids = new Set(mine.docs.map(function(d){ return d.data().blockedId; }));
+    const against = await window.fbDb.collection('blocks').where('blockedId','==',currentUser.uid).get();
+    blockedMeUids = new Set(against.docs.map(function(d){ return d.data().blockerId; }));
+  }catch(e){ /* non-critical if this fails to load */ }
+}
+
+function isBlockedEitherWay(uid){
+  return myBlockedUids.has(uid) || blockedMeUids.has(uid);
+}
+
+async function blockUserId(targetUid, targetName){
+  if(!currentUser){ openAuth(); return; }
+  if(targetUid===currentUser.uid) return;
+  if(!confirm('Block '+targetName+'? They won\'t be able to message you, and you won\'t see each other\'s posts or profile in Connect.')) return;
+  try{
+    await window.fbDb.collection('blocks').doc(currentUser.uid+'_'+targetUid).set({
+      blockerId: currentUser.uid, blockedId: targetUid, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    myBlockedUids.add(targetUid);
+    alert(targetName+' has been blocked.');
+    if(document.getElementById('connect-screen').classList.contains('active')){ renderConnectList(); loadFeed(); }
+    if(document.getElementById('messages-screen').classList.contains('active')){ loadConversations(); }
+  }catch(e){ alert('Could not block: '+(e.message||e.code)); }
+}
+
+async function unblockUserId(targetUid){
+  if(!currentUser) return;
+  try{
+    await window.fbDb.collection('blocks').doc(currentUser.uid+'_'+targetUid).delete();
+    myBlockedUids.delete(targetUid);
+    renderBlockedList();
+  }catch(e){ alert('Could not unblock: '+(e.message||e.code)); }
+}
+
+async function reportContent(targetType, targetId, targetLabel){
+  if(!currentUser){ openAuth(); return; }
+  const reason = prompt('Why are you reporting this '+targetType+'? (spam, scam, abuse, etc.)');
+  if(!reason || !reason.trim()) return;
+  try{
+    await window.fbDb.collection('reports').add({
+      reporterId: currentUser.uid, targetType: targetType, targetId: targetId, targetLabel: targetLabel||'',
+      reason: reason.trim().slice(0,500), createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    alert('Report submitted. Thank you — our team will review it.');
+  }catch(e){ alert('Could not submit report: '+(e.message||e.code)); }
+}
+
+async function renderBlockedList(){
+  const wrap=document.getElementById('blockedUsersList');
+  if(!wrap) return;
+  if(myBlockedUids.size===0){ wrap.innerHTML='<div class="empty-state"><div class="big">🚫</div><div class="title">No blocked users</div></div>'; return; }
+  wrap.innerHTML='<div class="empty-state"><div class="big">⏳</div><div class="title">Loading…</div></div>';
+  try{
+    const rows=[];
+    for(const uid of myBlockedUids){
+      const doc = await window.fbDb.collection('users').doc(uid).get();
+      const name = doc.exists ? (doc.data().name||'User') : 'User';
+      rows.push({uid:uid, name:name});
+    }
+    wrap.innerHTML='';
+    rows.forEach(function(r){
+      const row=document.createElement('div'); row.className='account-chip';
+      row.innerHTML='<div class="avatar">'+escapeHTML(r.name.charAt(0).toUpperCase())+'</div><div style="flex:1;"><div class="chip-name">'+escapeHTML(r.name)+'</div></div><button class="add-account-btn" style="margin:0; width:auto; padding:7px 12px; font-size:12px;" onclick="unblockUserId(\''+r.uid+'\')">Unblock</button>';
+      wrap.appendChild(row);
+    });
+  }catch(e){ wrap.innerHTML='<div class="empty-state"><div class="big">⚠️</div><div class="title">Could not load blocked users</div></div>'; }
+}
 function initAuthWatch(){
   const tryBind=setInterval(function(){
     if(window.fbReady){
@@ -693,6 +782,7 @@ function initAuthWatch(){
         currentUser=user;
         if(user) currentUserName = localStorage.getItem('aw_myname_'+user.uid) || (user.email? user.email.split('@')[0]:'User');
         else if(typeof unsubChatMessages!=='undefined' && unsubChatMessages){ unsubChatMessages(); unsubChatMessages=null; activeChat=null; }
+        loadBlockState();
         if(document.getElementById('profile-screen').classList.contains('active')) renderProfile();
       });
       loadSharedPosts();
@@ -730,7 +820,8 @@ function openDetail(item){
     <div class="detail-price">${escapeHTML(item.price)}</div>
     <div class="detail-desc">${escapeHTML(item.desc)}</div>
     ${extraHtml}
-    <button class="contact-btn" onclick="contactSeller()">Contact</button>`;
+    <button class="contact-btn" onclick="contactSeller()">Contact</button>
+    ${(item.shared && item.id && currentUser && item.ownerId!==currentUser.uid) ? '<button style="display:block; margin:10px auto 0; background:none; border:none; color:var(--muted); font-size:12px; cursor:pointer; font-family:inherit;" onclick="reportContent(\'listing\',\''+item.id+'\',\''+(item.title||'').replace(/'/g,"")+'\')">🚩 Report this listing</button>' : ''}`;
   show('detail');
 }
 
@@ -764,6 +855,7 @@ function contactSeller(){
 async function openChatWith(otherUid, otherName, listingId, listingTitle){
   if(!currentUser){ openAuth(); return; }
   if(otherUid === currentUser.uid){ alert("You can't message yourself."); return; }
+  if(isBlockedEitherWay(otherUid)){ alert("You can't message this user."); return; }
   const convId = convIdFor(currentUser.uid, otherUid);
   activeChat = {convId: convId, otherUid: otherUid, otherName: otherName};
   document.getElementById('chatTitle').textContent = otherName;
@@ -891,20 +983,81 @@ async function loadConversations(){
 
 /* ---------- Social Feed ---------- */
 let currentPostDetailId=null;
+let feedComposerFile=null;
+const FEED_IMAGE_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+const FEED_IMAGE_TYPES = ['image/jpeg','image/png','image/webp'];
+
+function onFeedImageSelected(evt){
+  const file = evt.target.files && evt.target.files[0];
+  const errEl = document.getElementById('feedComposerError');
+  errEl.textContent='';
+  if(!file) return;
+  if(FEED_IMAGE_TYPES.indexOf(file.type) === -1){
+    errEl.textContent = 'Only JPEG, PNG or WebP images are allowed.';
+    evt.target.value=''; return;
+  }
+  if(file.size > FEED_IMAGE_MAX_BYTES){
+    errEl.textContent = 'Image is too large. Maximum size is 5 MB.';
+    evt.target.value=''; return;
+  }
+  feedComposerFile = file;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    document.getElementById('feedImagePreview').src = e.target.result;
+    document.getElementById('feedImagePreviewWrap').style.display='block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeFeedImage(){
+  feedComposerFile = null;
+  document.getElementById('feedImageInput').value='';
+  document.getElementById('feedImagePreviewWrap').style.display='none';
+  document.getElementById('feedImagePreview').src='';
+}
 
 async function submitFeedPost(){
   if(!currentUser){ alert('Please log in first to post.'); openAuth(); return; }
   const input=document.getElementById('feedComposerInput');
   const text=(input.value||'').trim();
-  if(!text) return;
+  const errEl=document.getElementById('feedComposerError');
+  errEl.textContent='';
+  if(!text && !feedComposerFile){ errEl.textContent='Write something or add a photo first.'; return; }
+  const postBtn=document.getElementById('feedPostBtn');
+  postBtn.disabled=true;
   try{
-    await window.fbDb.collection('feedPosts').add({
+    let imageUrl=null, imagePath=null;
+    if(feedComposerFile){
+      const progWrap=document.getElementById('feedUploadProgressWrap');
+      const progBar=document.getElementById('feedUploadProgressBar');
+      progWrap.style.display='block'; progBar.style.width='0%';
+      const ext = feedComposerFile.type==='image/png'?'png':(feedComposerFile.type==='image/webp'?'webp':'jpg');
+      imagePath = 'feedImages/'+currentUser.uid+'/'+Date.now()+'.'+ext;
+      const ref = window.fbStorage.ref(imagePath);
+      const task = ref.put(feedComposerFile, {contentType: feedComposerFile.type});
+      await new Promise(function(resolve, reject){
+        task.on('state_changed', function(snap){
+          const pct = Math.round((snap.bytesTransferred/snap.totalBytes)*100);
+          progBar.style.width = pct+'%';
+        }, reject, resolve);
+      });
+      imageUrl = await task.snapshot.ref.getDownloadURL();
+      progWrap.style.display='none';
+    }
+    const postData = {
       authorId: currentUser.uid, authorName: currentUserName, text: text,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
+    };
+    if(imageUrl){ postData.imageUrl=imageUrl; postData.imagePath=imagePath; }
+    await window.fbDb.collection('feedPosts').add(postData);
     input.value='';
+    removeFeedImage();
     loadFeed();
-  }catch(e){ alert('Failed to post: '+(e.message||e.code)); }
+  }catch(e){
+    errEl.textContent = 'Failed to post: '+(e.message||e.code);
+    document.getElementById('feedUploadProgressWrap').style.display='none';
+  }
+  postBtn.disabled=false;
 }
 
 async function buildFeedCard(p){
@@ -915,13 +1068,18 @@ async function buildFeedCard(p){
   const commentCount = commentsSnap.size;
   const t = p.createdAt && p.createdAt.toDate ? p.createdAt.toDate() : null;
   const card=document.createElement('div'); card.className='feed-card';
+  const imgHtml = p.imageUrl ? '<img src="'+escapeHTML(p.imageUrl)+'" style="max-width:100%; border-radius:10px; margin-bottom:10px; display:block;" loading="lazy">' : '';
   card.innerHTML = '<div class="feed-head"><div class="avatar">'+escapeHTML((p.authorName||'?').charAt(0).toUpperCase())+'</div><div><div class="feed-author">'+escapeHTML(p.authorName||'User')+'</div><div class="feed-time">'+escapeHTML(timeAgoShort(t))+'</div></div></div>'
-    +'<div class="feed-text">'+escapeHTML(p.text)+'</div>'
+    +(p.text ? '<div class="feed-text">'+escapeHTML(p.text)+'</div>' : '')
+    +imgHtml
     +'<div class="feed-actions">'
     +'<button class="feed-action-btn '+(likedByMe?'liked':'')+'" onclick="event.stopPropagation(); toggleLike(\''+p.id+'\', this)">'+(likedByMe?'❤️':'🤍')+' <span class="likeCountSpan">'+likeCount+'</span></button>'
     +'<button class="feed-action-btn" onclick="event.stopPropagation(); openPostDetail(\''+p.id+'\')">💬 '+commentCount+'</button>'
     +'<button class="feed-action-btn" onclick="event.stopPropagation(); sharePost(\''+p.id+'\')">🔗 Share</button>'
-    +(currentUser && p.authorId===currentUser.uid ? '<button class="feed-delete-btn" onclick="event.stopPropagation(); deleteFeedPost(\''+p.id+'\')">Delete</button>' : '')
+    +(currentUser && p.authorId===currentUser.uid
+        ? '<button class="feed-delete-btn" onclick="event.stopPropagation(); deleteFeedPost(\''+p.id+'\')">Delete</button>'
+        : (currentUser ? '<button class="feed-delete-btn" style="color:var(--muted);" onclick="event.stopPropagation(); reportContent(\'post\',\''+p.id+'\',\'Feed post\')">Report</button><button class="feed-delete-btn" onclick="event.stopPropagation(); blockUserId(\''+p.authorId+'\',\''+(p.authorName||'User').replace(/'/g,"")+'\')">Block</button>' : '')
+      )
     +'</div>';
   card.onclick=function(){ openPostDetail(p.id); };
   return card;
@@ -933,9 +1091,10 @@ async function loadFeed(){
   wrap.innerHTML='<div class="empty-state"><div class="big">⏳</div><div class="title">Loading…</div></div>';
   try{
     const snap = await window.fbDb.collection('feedPosts').orderBy('createdAt','desc').limit(50).get();
-    if(snap.empty){ wrap.innerHTML='<div class="empty-state"><div class="big">📝</div><div class="title">No posts yet</div><div>Be the first to share something</div></div>'; return; }
+    const visibleDocs = snap.docs.filter(function(doc){ return !isBlockedEitherWay(doc.data().authorId); });
+    if(visibleDocs.length===0){ wrap.innerHTML='<div class="empty-state"><div class="big">📝</div><div class="title">No posts yet</div><div>Be the first to share something</div></div>'; return; }
     wrap.innerHTML='';
-    for(const doc of snap.docs){
+    for(const doc of visibleDocs){
       const p=doc.data(); p.id=doc.id;
       wrap.appendChild(await buildFeedCard(p));
     }
@@ -966,7 +1125,13 @@ async function toggleLike(postId, btnEl){
 async function deleteFeedPost(postId){
   if(!confirm('Delete this post? This cannot be undone.')) return;
   try{
-    await window.fbDb.collection('feedPosts').doc(postId).delete();
+    const docRef = window.fbDb.collection('feedPosts').doc(postId);
+    const doc = await docRef.get();
+    const data = doc.exists ? doc.data() : null;
+    await docRef.delete();
+    if(data && data.imagePath){
+      try{ await window.fbStorage.ref(data.imagePath).delete(); }catch(e){ /* image cleanup best-effort, not critical */ }
+    }
     loadFeed();
   }catch(e){ alert('Failed to delete: '+(e.message||e.code)); }
 }
@@ -1079,6 +1244,7 @@ function renderProfile(){
     document.getElementById('activeAvatar').textContent = '?';
     wrap.innerHTML = '';
   }
+  renderBlockedList();
 }
 
 let myOutgoing=[], myIncoming=[], cachedPeople=[];
@@ -1152,7 +1318,8 @@ function renderConnectList(){
     else btnHtml='<button class="add-account-btn" style="margin:0; width:auto; padding:8px 14px; font-size:12px;" onclick="sendFriendRequest(\''+p.id+'\', \''+(p.name||'User').replace(/'/g,"")+'\')">+ Add</button>';
     const row=document.createElement('div');
     row.className='account-chip';
-    row.innerHTML='<div class="avatar">'+escapeHTML((p.name||'?').charAt(0).toUpperCase())+'</div><div style="flex:1;"><div class="chip-name">'+escapeHTML(p.name||'User')+'</div><div class="chip-sub">'+escapeHTML(p.email||'')+'</div></div>'+btnHtml;
+    row.innerHTML='<div class="avatar">'+escapeHTML((p.name||'?').charAt(0).toUpperCase())+'</div><div style="flex:1;"><div class="chip-name">'+escapeHTML(p.name||'User')+'</div><div class="chip-sub">'+escapeHTML(p.email||'')+'</div></div>'+btnHtml
+      +'<button style="margin-left:8px; background:none; border:none; color:var(--muted); font-size:11px; cursor:pointer; font-family:inherit;" onclick="blockUserId(\''+p.id+'\', \''+(p.name||'User').replace(/'/g,"")+'\')">Block</button>';
     listEl.appendChild(row);
   });
 }
@@ -1175,7 +1342,8 @@ async function renderConnect(){
     await loadMyConnections();
     const snap = await window.fbDb.collection('users').limit(50).get();
     cachedPeople = snap.docs.map(function(d){ const v=d.data(); v.id=d.id; return v; })
-      .filter(function(p){ return !currentUser || p.id!==currentUser.uid; });
+      .filter(function(p){ return !currentUser || p.id!==currentUser.uid; })
+      .filter(function(p){ return !isBlockedEitherWay(p.id); });
     renderRequestsSection();
     renderConnectList();
   }catch(e){
