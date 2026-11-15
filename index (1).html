@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AgoraWorks</title>
+<meta name="theme-color" content="#0A0F1E">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AgoraWorks">
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-app-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-auth-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-storage-compat.js"></script>
+<script>
+  window.onerror = function(msg, src, line, col, err){
+    alert('DEBUG ERROR:\n' + msg + '\nLine: ' + line + ':' + col);
+    return false;
+  };
+</script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyANBhqfmSnYWrUmNXxRemfdrXLjIijN3fg",
+    authDomain: "agora-works.firebaseapp.com",
+    projectId: "agora-works",
+    storageBucket: "agora-works.firebasestorage.app",
+    messagingSenderId: "163511541948",
+    appId: "1:163511541948:web:84ee64dd664ee079d570b9"
+  };
+  firebase.initializeApp(firebaseConfig);
+  window.fbAuth = firebase.auth();
+  window.fbDb = firebase.firestore();
+  window.fbStorage = firebase.storage();
+  window.fbReady = true;
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0A0F1E; --navy2:#111A2E; --card:#14203A; --card-hi:#1A2A4A;
+  --teal:#2DD9C4; --teal-dim:#1C8F82; --text:#EAF0F7; --muted:#8EA0BA;
+  --border:#223154; --danger:#FF6B6B;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html{scroll-padding-top: env(safe-area-inset-top, 0px); height:100%;}
+body{
+  min-height:100%; background:var(--navy); color:var(--text);
+  font-family:'Hind Siliguri', system-ui, sans-serif;
+  display:flex; justify-content:center;
+}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:20;background:var(--navy);}
+#app{width:100%; max-width:430px; min-height:100vh; position:relative; display:flex; flex-direction:column;}
+.screen{display:none; flex:1; flex-direction:column; animation:fade .2s ease;}
+.screen.active{display:flex;}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+
+/* ---- Welcome ---- */
+#welcome{justify-content:center; align-items:center; padding:32px 24px; gap:28px; text-align:center;}
+.logo{font-size:26px; font-weight:700; letter-spacing:.5px;}
+.logo span{color:var(--teal);}
+.tagline{color:var(--muted); font-size:14px; max-width:260px;}
+.entry-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px; width:100%;}
+.entry-btn{
+  background:var(--card); border:1px solid var(--border); border-radius:16px;
+  padding:22px 10px; color:var(--text); font-size:15px; font-weight:600;
+  display:flex; flex-direction:column; gap:8px; align-items:center;
+  transition:transform .12s ease, border-color .12s ease; cursor:pointer;
+}
+.entry-btn:active{transform:scale(.96); border-color:var(--teal);}
+.entry-icon{font-size:22px;}
+.demo-note{font-size:11px; color:var(--muted); margin-top:8px;}
+
+/* ---- Top bar ---- */
+.topbar{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 18px; border-bottom:1px solid var(--border);
+  position:sticky; top:0; background:var(--navy); z-index:5;
+}
+.topbar h1{font-size:17px; font-weight:600;}
+.back-btn{background:none; border:none; color:var(--teal); font-size:14px; cursor:pointer;}
+.zone-toggle{display:flex; background:var(--card); border-radius:12px; padding:4px; margin:14px 18px 0;}
+.zone-toggle button{
+  flex:1; padding:9px 0; border:none; border-radius:9px; background:transparent;
+  color:var(--muted); font-weight:600; font-size:13px; cursor:pointer; font-family:inherit;
+}
+.zone-toggle button.active{background:var(--teal); color:#07201B;}
+
+/* ---- Search ---- */
+.search-wrap{padding:14px 18px 6px;}
+.search-box{
+  display:flex; align-items:center; gap:8px; background:var(--card);
+  border:1px solid var(--border); border-radius:12px; padding:10px 14px;
+}
+.search-box input{
+  flex:1; background:none; border:none; outline:none; color:var(--text); font-size:14px; font-family:inherit;
+}
+.search-box input::placeholder{color:var(--muted);}
+
+/* ---- Listings ---- */
+.list{flex:1; overflow-y:auto; padding:10px 18px 90px; display:flex; flex-direction:column; gap:12px;}
+.card{
+  background:var(--card); border:1px solid var(--border); border-radius:14px; padding:14px;
+  display:flex; gap:12px; cursor:pointer;
+}
+.card:active{border-color:var(--teal);}
+.thumb{
+  width:52px; height:52px; border-radius:10px; flex-shrink:0;
+  background:var(--card-hi); display:flex; align-items:center; justify-content:center; font-size:20px;
+}
+.card-body{flex:1; min-width:0;}
+.card-title{font-size:14.5px; font-weight:600; margin-bottom:4px;}
+.card-meta{font-size:12.5px; color:var(--muted); display:flex; gap:6px; flex-wrap:wrap;}
+.price{color:var(--teal); font-weight:700; font-size:14px; white-space:nowrap;}
+.demo-tag{
+  display:inline-block; font-size:10px; color:var(--muted); border:1px solid var(--border);
+  border-radius:6px; padding:1px 6px; margin-bottom:8px;
+}
+
+/* ---- Social Feed ---- */
+.composer{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:12px;}
+.composer textarea{width:100%; background:transparent; border:none; color:var(--text); font-family:inherit; font-size:13.5px; resize:none; min-height:50px; outline:none;}
+.composer-btn{float:right; background:var(--teal); color:#05211f; border:none; border-radius:16px; padding:7px 16px; font-weight:700; font-size:12.5px; cursor:pointer; font-family:inherit; margin-top:4px;}
+.feed-card{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:14px; margin-bottom:12px; cursor:pointer;}
+.feed-head{display:flex; align-items:center; gap:10px; margin-bottom:8px;}
+.feed-head .avatar{width:36px; height:36px; font-size:14px; flex-shrink:0;}
+.feed-author{font-size:13.5px; font-weight:600;}
+.feed-time{font-size:11px; color:var(--muted);}
+.feed-text{font-size:13.5px; line-height:1.5; margin-bottom:10px; white-space:pre-wrap; word-wrap:break-word;}
+.feed-actions{display:flex; gap:18px; border-top:1px solid var(--border); padding-top:8px; align-items:center;}
+.feed-action-btn{background:none; border:none; color:var(--muted); font-size:12.5px; cursor:pointer; font-family:inherit; display:flex; align-items:center; gap:5px; padding:0;}
+.feed-action-btn.liked{color:var(--teal); font-weight:700;}
+.feed-delete-btn{margin-left:auto; color:var(--danger); font-size:11.5px; background:none; border:none; cursor:pointer; font-family:inherit;}
+.comment-row{padding:9px 0; border-bottom:1px solid var(--border);}
+.comment-head{display:flex; justify-content:space-between; font-size:12px;}
+.comment-author{font-weight:600;}
+.comment-time{color:var(--muted);}
+.comment-text{font-size:13px; margin-top:3px; white-space:pre-wrap; word-wrap:break-word;}
+.comment-delete{color:var(--danger); font-size:10.5px; cursor:pointer; margin-top:4px; background:none; border:none; font-family:inherit; padding:0;}
+
+/* ---- Messaging ---- */
+.conv-row{display:flex; gap:12px; align-items:center; padding:13px 18px; border-bottom:1px solid var(--border); cursor:pointer;}
+.conv-row .avatar{width:44px; height:44px; font-size:16px; flex-shrink:0;}
+.conv-info{flex:1; min-width:0;}
+.conv-name{font-size:14px; font-weight:600;}
+.conv-preview{font-size:12.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; max-width:220px;}
+.conv-context{font-size:10.5px; color:var(--teal); margin-top:2px;}
+.conv-meta{font-size:10.5px; color:var(--muted); text-align:right; flex-shrink:0; white-space:nowrap;}
+.chat-messages{flex:1; overflow-y:auto; padding:14px 16px; display:flex; flex-direction:column; gap:8px;}
+.msg-row{display:flex;}
+.msg-row.mine{justify-content:flex-end;}
+.msg-bubble{max-width:75%; padding:9px 13px; border-radius:14px; font-size:13.5px; line-height:1.4; word-wrap:break-word;}
+.msg-row.mine .msg-bubble{background:var(--teal); color:#05211f; border-bottom-right-radius:4px;}
+.msg-row.theirs .msg-bubble{background:var(--card); border:1px solid var(--border); border-bottom-left-radius:4px;}
+.msg-time{font-size:9.5px; color:var(--muted); margin-top:3px; text-align:right;}
+.msg-row.theirs .msg-time{text-align:left;}
+.chat-context-bar{padding:9px 16px; background:var(--card); border-bottom:1px solid var(--border); font-size:11.5px; color:var(--muted);}
+.chat-input-bar{display:flex; gap:8px; padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px)); border-top:1px solid var(--border); background:var(--navy2); flex-shrink:0;}
+.chat-input-bar input{flex:1; background:var(--card); border:1px solid var(--border); border-radius:20px; padding:10px 16px; color:var(--text); font-size:14px; font-family:inherit; outline:none; min-width:0;}
+.chat-send-btn{background:var(--teal); border:none; border-radius:50%; width:40px; height:40px; color:#05211f; font-size:16px; cursor:pointer; flex-shrink:0;}
+.chat-send-btn:disabled{opacity:.5;}
+
+/* ---- Create Listing ---- */
+.type-card{
+  background:var(--card); border:1px solid var(--border); border-radius:14px; padding:14px;
+  margin-bottom:10px; cursor:pointer; display:flex; gap:12px; align-items:center;
+}
+.type-card:active{border-color:var(--teal);}
+.type-card .ticon{font-size:24px; flex-shrink:0;}
+.type-card .tname{font-size:14.5px; font-weight:600;}
+.type-card .tdesc{font-size:12px; color:var(--muted); margin-top:2px;}
+.field-group{margin-bottom:14px;}
+.field-label{font-size:12.5px; color:var(--muted); margin-bottom:6px; font-weight:600;}
+.field-input, .field-textarea{
+  width:100%; background:var(--card); border:1px solid var(--border); border-radius:10px;
+  padding:11px 13px; color:var(--text); font-size:14px; font-family:inherit; box-sizing:border-box;
+}
+.field-textarea{min-height:80px; resize:vertical;}
+.field-error{color:#ff6b6b; font-size:11.5px; margin-top:4px;}
+.step-indicator{font-size:12px; color:var(--muted); margin-bottom:14px;}
+.submit-btn{
+  width:100%; padding:14px; border-radius:12px; border:none; background:var(--teal);
+  color:#05211f; font-weight:700; font-size:14.5px; cursor:pointer; font-family:inherit; margin-top:6px;
+}
+
+/* ---- Bottom nav ---- */
+.bottomnav{
+  position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:430px;
+  display:flex; justify-content:space-around; background:var(--navy2); border-top:1px solid var(--border);
+  padding:10px 6px calc(10px + env(safe-area-inset-bottom,0px)); z-index:10;
+}
+.nav-item{
+  background:none; border:none; color:var(--muted); font-size:11px; display:flex; flex-direction:column;
+  align-items:center; gap:3px; cursor:pointer; font-family:inherit; flex:1;
+}
+.nav-item.active{color:var(--teal);}
+.nav-icon{font-size:19px;}
+
+/* ---- Profile ---- */
+.profile-head{padding:24px 18px; display:flex; gap:14px; align-items:center; border-bottom:1px solid var(--border);}
+.avatar{
+  width:58px; height:58px; border-radius:50%; background:var(--card-hi); display:flex;
+  align-items:center; justify-content:center; font-size:22px; font-weight:700; color:var(--teal); flex-shrink:0;
+}
+.profile-name{font-size:16px; font-weight:700;}
+.profile-sub{font-size:12.5px; color:var(--muted); margin-top:3px;}
+.section-label{font-size:12px; color:var(--muted); padding:16px 18px 6px; font-weight:600;}
+.row{
+  display:flex; justify-content:space-between; align-items:center; padding:13px 18px;
+  border-bottom:1px solid var(--border); font-size:14px; cursor:pointer;
+}
+.row .arrow{color:var(--muted);}
+.account-chip{
+  display:flex; align-items:center; gap:10px; padding:12px 18px; border-bottom:1px solid var(--border);
+}
+.account-chip .avatar{width:38px; height:38px; font-size:14px;}
+.chip-name{font-size:13.5px; font-weight:600;}
+.chip-sub{font-size:11.5px; color:var(--muted);}
+.active-dot{width:8px; height:8px; border-radius:50%; background:var(--teal); margin-inline-start:auto;}
+.add-account-btn{
+  margin:14px 18px; padding:12px; border-radius:12px; border:1px dashed var(--border);
+  background:none; color:var(--teal); font-weight:600; font-size:13.5px; width:calc(100% - 36px); cursor:pointer; font-family:inherit;
+}
+
+/* ---- Messages ---- */
+.empty-state{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:40px 30px; text-align:center; color:var(--muted);}
+.empty-state .big{font-size:34px;}
+.empty-state .title{color:var(--text); font-weight:600; font-size:15px;}
+
+/* ---- Detail sheet ---- */
+#detail .detail-body{padding:18px; flex:1; overflow-y:auto; padding-bottom:100px;}
+.detail-thumb{width:100%; height:140px; border-radius:14px; background:var(--card-hi); display:flex; align-items:center; justify-content:center; font-size:40px; margin-bottom:16px;}
+.detail-title{font-size:18px; font-weight:700; margin-bottom:6px;}
+.detail-price{color:var(--teal); font-size:16px; font-weight:700; margin-bottom:14px;}
+.detail-desc{font-size:14px; color:var(--muted); line-height:1.6; margin-bottom:18px;}
+.contact-btn{
+  background:var(--teal); color:#07201B; border:none; border-radius:12px; padding:13px; font-weight:700;
+  font-size:14px; width:100%; cursor:pointer; font-family:inherit;
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- WELCOME -->
+  <div class="screen active" id="welcome">
+    <div class="logo">Agora<span>Works</span></div>
+    <div class="tagline">Find work, hire talent, buy and sell — all in one place</div>
+    <div class="entry-grid">
+      <button class="entry-btn" onclick="enterApp('shop')"><span class="entry-icon">🛍️</span>Buy</button>
+      <button class="entry-btn" onclick="enterApp('shop')"><span class="entry-icon">🏪</span>Sell</button>
+      <button class="entry-btn" onclick="enterApp('work')"><span class="entry-icon">🧰</span>Find Work</button>
+      <button class="entry-btn" onclick="enterApp('work')"><span class="entry-icon">📋</span>Hire Talent</button>
+    </div>
+    <div class="demo-note">Real accounts, real posts, real connections — some listings are sample demo data</div>
+  </div>
+
+  <!-- MAIN (search/listing) -->
+  <div class="screen" id="main">
+    <div class="topbar"><h1>AgoraWorks</h1><button class="back-btn" onclick="goWelcome()">Home</button></div>
+    <div class="zone-toggle">
+      <button id="tab-work" onclick="setZone('work')">Work Zone</button>
+      <button id="tab-shop" onclick="setZone('shop')">Shop Zone</button>
+    </div>
+    <div class="search-wrap">
+      <div class="search-box">
+        <span>🔍</span>
+        <input id="searchInput" placeholder="Search..." oninput="renderList()">
+      </div>
+    </div>
+    <div class="list" id="listArea"></div>
+    <div class="bottomnav">
+      <button class="nav-item active" data-nav="search" onclick="setNav('search')"><span class="nav-icon">🔍</span>Search</button>
+      <button class="nav-item" data-nav="jobs" onclick="setNav('jobs')"><span class="nav-icon">📌</span>My Posts</button>
+      <button class="nav-item" data-nav="connect" onclick="setNav('connect')"><span class="nav-icon">🧑‍🤝‍🧑</span>Connect</button>
+      <button class="nav-item" data-nav="messages" onclick="setNav('messages')"><span class="nav-icon">💬</span>Messages</button>
+      <button class="nav-item" data-nav="profile" onclick="setNav('profile')"><span class="nav-icon">👤</span>Profile</button>
+    </div>
+  </div>
+
+  <!-- MESSAGES -->
+  <div class="screen" id="messages-screen">
+    <div class="topbar"><h1>Messages</h1><button class="back-btn" onclick="backToMain()">Back</button></div>
+    <div id="convListWrap" style="flex:1; overflow-y:auto;"></div>
+    <div class="bottomnav">
+      <button class="nav-item" onclick="setNav('search')"><span class="nav-icon">🔍</span>Search</button>
+      <button class="nav-item" onclick="setNav('jobs')"><span class="nav-icon">📌</span>My Posts</button>
+      <button class="nav-item" onclick="setNav('connect')"><span class="nav-icon">🧑‍🤝‍🧑</span>Connect</button>
+      <button class="nav-item active" onclick="setNav('messages')"><span class="nav-icon">💬</span>Messages</button>
+      <button class="nav-item" onclick="setNav('profile')"><span class="nav-icon">👤</span>Profile</button>
+    </div>
+  </div>
+
+  <!-- MY POSTS -->
+  <div class="screen" id="jobs-screen">
+    <div class="topbar"><h1>My Posts</h1><button class="back-btn" onclick="backToMain()">Back</button></div>
+    <div style="padding:14px 18px 0;"><button class="add-account-btn" style="margin:0; width:100%;" onclick="openCreateFlow()">+ Add New Post</button></div>
+    <div class="list" id="myPostsArea" style="flex:1;"></div>
+    <div class="bottomnav">
+      <button class="nav-item" onclick="setNav('search')"><span class="nav-icon">🔍</span>Search</button>
+      <button class="nav-item active" onclick="setNav('jobs')"><span class="nav-icon">📌</span>My Posts</button>
+      <button class="nav-item" onclick="setNav('connect')"><span class="nav-icon">🧑‍🤝‍🧑</span>Connect</button>
+      <button class="nav-item" onclick="setNav('messages')"><span class="nav-icon">💬</span>Messages</button>
+      <button class="nav-item" onclick="setNav('profile')"><span class="nav-icon">👤</span>Profile</button>
+    </div>
+  </div>
+
+  <!-- CREATE LISTING -->
+  <div class="screen" id="create-screen">
+    <div class="topbar"><h1 id="createTitle">New Listing</h1><button class="back-btn" onclick="createBack()">Back</button></div>
+    <div id="createBody" style="padding:14px 18px;"></div>
+  </div>
+
+  <!-- CONNECT -->
+  <div class="screen" id="connect-screen">
+    <div class="topbar"><h1>Connect</h1><button class="back-btn" onclick="backToMain()">Back</button></div>
+    <div class="section-label">Your profile</div>
+    <div class="account-chip" style="border-bottom:1px solid var(--border);">
+      <div class="avatar" id="connectMyAvatar" style="width:44px;height:44px;font-size:16px;">?</div>
+      <div><div class="chip-name" id="connectMyName">Not logged in</div><div class="chip-sub" id="connectMySub">Log in to appear here and connect with others</div></div>
+    </div>
+    <div id="requestsSection" style="display:none;">
+      <div class="section-label">Friend Requests</div>
+      <div id="requestsList"></div>
+    </div>
+    <div style="padding:14px 18px 0;">
+      <div class="composer">
+        <textarea id="feedComposerInput" placeholder="Share something with AgoraWorks..." maxlength="3000"></textarea>
+        <div id="feedImagePreviewWrap" style="display:none; margin:8px 0;">
+          <img id="feedImagePreview" style="max-width:100%; border-radius:10px; display:block;">
+          <button onclick="removeFeedImage()" style="margin-top:6px; background:none; border:none; color:var(--danger); font-size:11.5px; cursor:pointer; font-family:inherit; padding:0;">Remove photo</button>
+        </div>
+        <div id="feedUploadProgressWrap" style="display:none; margin:8px 0; background:var(--border); border-radius:6px; height:6px; overflow:hidden;">
+          <div id="feedUploadProgressBar" style="height:100%; width:0%; background:var(--teal);"></div>
+        </div>
+        <div id="feedComposerError" class="field-error"></div>
+        <input type="file" id="feedImageInput" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="onFeedImageSelected(event)">
+        <!-- Photo upload temporarily disabled: requires Firebase Storage (Blaze plan), postponed by request -->
+        <button style="display:none;" onclick="document.getElementById('feedImageInput').click()">📷 Photo</button>
+        <button class="composer-btn" id="feedPostBtn" onclick="submitFeedPost()">Post</button>
+        <div style="clear:both;"></div>
+      </div>
+    </div>
+    <div class="section-label">Feed</div>
+    <div id="feedList" style="padding:0 18px;"></div>
+    <div class="section-label">People on AgoraWorks</div>
+    <div class="list" id="connectList" style="padding-top:0;"></div>
+    <div class="bottomnav">
+      <button class="nav-item" onclick="setNav('search')"><span class="nav-icon">🔍</span>Search</button>
+      <button class="nav-item" onclick="setNav('jobs')"><span class="nav-icon">📌</span>My Posts</button>
+      <button class="nav-item active" onclick="setNav('connect')"><span class="nav-icon">🧑‍🤝‍🧑</span>Connect</button>
+      <button class="nav-item" onclick="setNav('messages')"><span class="nav-icon">💬</span>Messages</button>
+      <button class="nav-item" onclick="setNav('profile')"><span class="nav-icon">👤</span>Profile</button>
+    </div>
+  </div>
+
+  <!-- AUTH -->
+  <div class="screen" id="auth-screen">
+    <div class="topbar"><h1 id="authTitle">Log In</h1><button class="back-btn" onclick="backToMain()">Back</button></div>
+    <div style="padding:20px 18px; flex:1;">
+      <div id="authNameWrap" style="display:none; margin-bottom:12px;">
+        <div class="search-box" style="border-radius:12px;"><input id="authName" placeholder="Your name"></div>
+      </div>
+      <div style="margin-bottom:12px;"><div class="search-box" style="border-radius:12px;"><input id="authEmail" type="email" placeholder="Email"></div></div>
+      <div style="margin-bottom:16px;"><div class="search-box" style="border-radius:12px; position:relative;"><input id="authPass" type="password" placeholder="Password (at least 6 characters)" style="padding-right:38px;"><span onclick="togglePassEye()" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); cursor:pointer; font-size:18px; user-select:none;" id="passEyeIcon">👁️</span></div></div>
+      <div id="authError" style="color:var(--danger); font-size:12.5px; margin-bottom:10px;"></div>
+      <button class="contact-btn" id="authSubmitBtn" onclick="submitAuth()">Log In</button>
+      <div style="text-align:center; margin-top:16px; font-size:13px; color:var(--muted);">
+        <span id="authSwitchText">Don't have an account?</span>
+        <a href="#" style="color:var(--teal); font-weight:600;" onclick="toggleAuthMode();return false;" id="authSwitchLink">Sign Up</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROFILE -->
+  <div class="screen" id="profile-screen">
+    <div class="topbar"><h1>Profile</h1><button class="back-btn" onclick="backToMain()">Back</button></div>
+    <div style="flex:1; overflow-y:auto; padding-bottom:90px;">
+      <div class="profile-head">
+        <div class="avatar" id="activeAvatar">A</div>
+        <div>
+          <div class="profile-name" id="activeName">Anik</div>
+          <div class="profile-sub" id="activeSub">anikmitra-dev · Work + Shop Profile</div>
+        </div>
+      </div>
+      <div class="section-label">Switch Account (Demo)</div>
+      <div id="accountList"></div>
+      <button class="add-account-btn" onclick="addAccount()">+ Add New Account</button>
+      <div class="section-label">Settings</div>
+      <div class="row">Skills / Services<span class="arrow">›</span></div>
+      <div class="row">Seller Info<span class="arrow">›</span></div>
+      <div class="row" onclick="logoutActive()">Log Out<span class="arrow" style="color:var(--danger)">›</span></div>
+      <div class="section-label">Blocked Users</div>
+      <div id="blockedUsersList" style="padding:0 18px;"></div>
+    </div>
+    <div class="bottomnav">
+      <button class="nav-item" onclick="setNav('search')"><span class="nav-icon">🔍</span>Search</button>
+      <button class="nav-item" onclick="setNav('jobs')"><span class="nav-icon">📌</span>My Posts</button>
+      <button class="nav-item" onclick="setNav('connect')"><span class="nav-icon">🧑‍🤝‍🧑</span>Connect</button>
+      <button class="nav-item" onclick="setNav('messages')"><span class="nav-icon">💬</span>Messages</button>
+      <button class="nav-item active" onclick="setNav('profile')"><span class="nav-icon">👤</span>Profile</button>
+    </div>
+  </div>
+
+  <!-- DETAIL -->
+  <div class="screen" id="detail">
+    <div class="topbar"><h1>Details</h1><button class="back-btn" onclick="backToMain()">Back</button></div>
+    <div class="detail-body" id="detailBody"></div>
+  </div>
+
+  <!-- CHAT -->
+  <div class="screen" id="chat-screen">
+    <div class="topbar"><h1 id="chatTitle">Chat</h1><button class="back-btn" onclick="closeChatScreen()">Back</button></div>
+    <div id="chatContextBar" class="chat-context-bar" style="display:none;"></div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-input-bar">
+      <input id="chatInput" type="text" placeholder="Type a message..." maxlength="2000" onkeydown="if(event.key==='Enter'){sendChatMessage();}">
+      <button class="chat-send-btn" id="chatSendBtn" onclick="sendChatMessage()">➤</button>
+    </div>
+  </div>
+
+  <!-- POST DETAIL -->
+  <div class="screen" id="post-detail-screen">
+    <div class="topbar"><h1>Post</h1><button class="back-btn" onclick="setNav('connect')">Back</button></div>
+    <div style="flex:1; overflow-y:auto; padding:14px 18px;">
+      <div id="postDetailCard"></div>
+      <div class="section-label">Comments</div>
+      <div id="commentsList"></div>
+    </div>
+    <div class="chat-input-bar">
+      <input id="commentInput" type="text" placeholder="Write a comment..." maxlength="1000" onkeydown="if(event.key==='Enter'){submitComment();}">
+      <button class="chat-send-btn" onclick="submitComment()">➤</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ---------- Demo data (clearly marked as sample, not real) ----------
+const WORK_DATA=[
+  {icon:'🎨',title:'Logo Design Service',meta:['Graphic Design','3-day delivery'],price:'৳800',desc:'Professional logo design service. This is a demo listing, not a real order.'},
+  {icon:'💻',title:'Website Development',meta:['Web Development','7 days'],price:'৳5,000',desc:'Website for small businesses. Demo data — for prototype display only.'},
+  {icon:'📝',title:'Content Writer Needed',meta:['Job Post','Dhaka'],price:'৳300/article',desc:'A client is looking for a content writer (demo post).'},
+  {icon:'📱',title:'App UI Designer Wanted',meta:['Job Post','Remote'],price:'৳2,500',desc:'UI design needed for a mobile app (demo post).'},
+];
+const SHOP_DATA=[
+  {icon:'👕',title:'Custom Print T-Shirt',meta:['Fashion','Dhaka'],price:'৳350',desc:'100% cotton, custom design print. This is a demo product.'},
+  {icon:'🎧',title:'Wireless Headphones',meta:['Electronics','In stock'],price:'৳1,200',desc:'Bluetooth headphones, 20-hour battery backup (demo product).'},
+  {icon:'🧴',title:'Handmade Soap Set',meta:['Beauty','3 pieces'],price:'৳450',desc:'Made with natural ingredients (demo product, sample price).'},
+  {icon:'📚',title:'Used Book Collection',meta:['Books','Used'],price:'৳60',desc:'Old books in good condition (demo product).'},
+];
+
+function escapeHTML(str){
+  if(str===null || str===undefined) return '';
+  return String(str).replace(/[&<>"']/g, function(ch){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];
+  });
+}
+let state={zone:'work', nav:'search'};
+let myPosts = JSON.parse(localStorage.getItem('aw_posts')||'[]');
+function savePosts(){ try{ localStorage.setItem('aw_posts', JSON.stringify(myPosts)); }catch(e){} }
+
+// demo accounts stored only in this browser's local storage — no real passwords, no server
+let accounts = JSON.parse(localStorage.getItem('aw_accounts')||'null') || [
+  {name:'Anik', sub:'anikmitra-dev', active:true}
+];
+function saveAccounts(){ try{ localStorage.setItem('aw_accounts', JSON.stringify(accounts)); }catch(e){} }
+
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function enterApp(zone){ state.zone=zone; show('main'); setZone(zone); }
+function goWelcome(){ show('welcome'); }
+function backToMain(){ show('main'); setNav('search'); }
+
+function setZone(zone){
+  state.zone=zone;
+  document.getElementById('tab-work').classList.toggle('active', zone==='work');
+  document.getElementById('tab-shop').classList.toggle('active', zone==='shop');
+  renderList();
+}
+
+function renderList(){
+  const q=(document.getElementById('searchInput').value||'').trim();
+  const base = state.zone==='work'? WORK_DATA : SHOP_DATA;
+  const live = (typeof sharedPosts!=='undefined'? sharedPosts:[]).filter(function(p){return p.zone===state.zone;});
+  const data = live.concat(base);
+  const filtered = data.filter(function(d){ return d.title.indexOf(q)!==-1 || q===''; });
+  const list=document.getElementById('listArea');
+  list.innerHTML='';
+  if(filtered.length===0){
+    list.innerHTML='<div class="empty-state"><div class="big">🔎</div><div class="title">No results found</div></div>';
+    return;
+  }
+  filtered.forEach(function(item){
+    const card=document.createElement('div');
+    card.className='card';
+    card.onclick=function(){openDetail(item);};
+    const tag = item.shared ? 'Live' : 'Demo';
+    const metaText = item.shared ? (item.categoryName || (item.zone==='work'?'Work Zone':'Shop Zone')) : item.meta.join(' · ');
+    card.innerHTML='<div class="thumb">'+escapeHTML(item.icon)+'</div><div class="card-body"><div class="demo-tag">'+tag+'</div><div class="card-title">'+escapeHTML(item.title)+'</div><div class="card-meta"><span>'+escapeHTML(metaText)+'</span></div></div><div class="price">'+escapeHTML(item.price)+'</div>';
+    list.appendChild(card);
+  });
+}
+
+const LISTING_TYPES=[
+  {id:'freelance', name:'Freelance Service', icon:'🧑‍💻', desc:'Offer a skill or service to clients', zone:'work'},
+  {id:'job', name:'Job / Project', icon:'📋', desc:'Post a job or project to hire someone', zone:'work'},
+  {id:'physical', name:'Physical Product', icon:'📦', desc:'Sell a physical item', zone:'shop'},
+  {id:'digital', name:'Digital Product', icon:'💾', desc:'Sell a digital item or file', zone:'shop'},
+  {id:'showroom', name:'Showroom Product', icon:'🏬', desc:'List a product from your shop or showroom', zone:'shop'},
+  {id:'wholesale', name:'Wholesale / Industrial', icon:'🏭', desc:'Bulk or industrial product listing', zone:'shop'},
+  {id:'bizservice', name:'Business Service', icon:'🏢', desc:'Offer a service from your business', zone:'work'}
+];
+const CATEGORIES={
+  'Design & Creative':['Logo Design','Brand Identity','Graphic Design','UI/UX Design','Illustration','3D Design','Presentation Design'],
+  'Video, Audio & Music':['Video Editing','Animation','Motion Graphics','Voice Over','Music Production','Sound Design'],
+  'Writing & Translation':['Content Writing','Copywriting','Translation','Editing & Proofreading','Technical Writing'],
+  'Programming & Technology':['Website Development','Mobile App Development','Software Development','AI Development','Automation','Database Services','Technical Support'],
+  'AI & Automation':['AI Model Development','Chatbots','Workflow Automation','Data Processing'],
+  'Digital Marketing':['SEO','Social Media Marketing','Content Marketing','Paid Advertising','Email Marketing'],
+  'Business & Consulting':['Business Planning','Market Research','Management Consulting','Legal Consulting'],
+  'Finance & Accounting':['Bookkeeping','Accounting Support','Financial Reporting','Business Finance Support'],
+  'Agriculture':['Agricultural Products','Farming Services','Agricultural Equipment','Seeds & Supplies','Consulting'],
+  'Education & Training':['Tutoring','Course Creation','Corporate Training','Language Teaching'],
+  'Personal & Local Services':['Home Services','Event Services','Beauty & Wellness','Repair Services'],
+  'Products & Shopping':['Fashion','Electronics','Home & Living','Beauty Products'],
+  'Digital Products':['Templates','E-books','Software / Apps','Courses'],
+  'Showroom & Retail':['Retail Store Items','Showroom Display Items'],
+  'Wholesale & Industrial':['Bulk Goods','Industrial Equipment','Raw Materials'],
+  'Other Services':['General Services','Miscellaneous']
+};
+const FIELD_CONFIG={
+  freelance:[{k:'priceField',label:'Starting Price (৳)',type:'text',ph:'e.g. 1000'},{k:'skills',label:'Skills',type:'text',ph:'e.g. Photoshop, Illustrator'},{k:'deliveryTime',label:'Delivery Time',type:'text',ph:'e.g. 3 days'}],
+  job:[{k:'priceField',label:'Budget (৳)',type:'text',ph:'e.g. 5000'},{k:'deadline',label:'Deadline',type:'text',ph:'e.g. 2026-12-01'},{k:'skills',label:'Required Skills',type:'text',ph:'e.g. React, Node.js'}],
+  physical:[{k:'priceField',label:'Price (৳)',type:'text',ph:'e.g. 500'},{k:'quantity',label:'Quantity',type:'text',ph:'e.g. 10'},{k:'condition',label:'Condition',type:'text',ph:'New / Used'},{k:'shipping',label:'Shipping Info',type:'text',ph:'e.g. Inside Dhaka only'}],
+  digital:[{k:'priceField',label:'Price (৳)',type:'text',ph:'e.g. 300'},{k:'deliveryInfo',label:'Delivery Info',type:'text',ph:'e.g. Instant download link'}],
+  showroom:[{k:'businessName',label:'Business / Shop Name',type:'text',ph:'e.g. Anik Fashion House'},{k:'priceField',label:'Price (৳)',type:'text',ph:'e.g. 800'},{k:'stock',label:'Stock Available',type:'text',ph:'e.g. 25 pieces'}],
+  wholesale:[{k:'priceField',label:'Bulk Price (৳)',type:'text',ph:'e.g. 200 per unit'},{k:'minOrderQty',label:'Minimum Order Quantity',type:'text',ph:'e.g. 100 units'},{k:'specifications',label:'Specifications',type:'text',ph:'e.g. Size, material, grade'}],
+  bizservice:[{k:'priceField',label:'Pricing',type:'text',ph:'e.g. Starts at ৳2000'},{k:'serviceArea',label:'Service Area',type:'text',ph:'e.g. Dhaka & nearby'},{k:'contactMethod',label:'Preferred Contact Method',type:'text',ph:'e.g. Phone call'}]
+};
+let createState={step:'type', type:null, category:null, subcategory:null};
+
+function openCreateFlow(){
+  if(!currentUser){ alert('Please log in first to post'); openAuth(); return; }
+  createState={step:'type', type:null, category:null, subcategory:null};
+  show('create-screen');
+  renderCreateStep();
+}
+function createBack(){
+  if(createState.step==='category'){ createState.step='type'; renderCreateStep(); }
+  else if(createState.step==='subcategory'){ createState.step='category'; renderCreateStep(); }
+  else if(createState.step==='form'){ createState.step='subcategory'; renderCreateStep(); }
+  else { setNav('jobs'); }
+}
+function renderCreateStep(){
+  const body=document.getElementById('createBody');
+  const titleEl=document.getElementById('createTitle');
+  if(createState.step==='type'){
+    titleEl.textContent='New Listing';
+    body.innerHTML='<div class="step-indicator">Step 1 of 4 · Choose a listing type</div>';
+    LISTING_TYPES.forEach(function(t){
+      const c=document.createElement('div'); c.className='type-card';
+      c.innerHTML='<div class="ticon">'+t.icon+'</div><div><div class="tname">'+escapeHTML(t.name)+'</div><div class="tdesc">'+escapeHTML(t.desc)+'</div></div>';
+      c.onclick=function(){ createState.type=t; createState.step='category'; renderCreateStep(); };
+      body.appendChild(c);
+    });
+  } else if(createState.step==='category'){
+    titleEl.textContent=createState.type.name;
+    body.innerHTML='<div class="step-indicator">Step 2 of 4 · Choose a category</div>';
+    Object.keys(CATEGORIES).forEach(function(cat){
+      const r=document.createElement('div'); r.className='row';
+      r.innerHTML='<span>'+escapeHTML(cat)+'</span><span class="arrow">›</span>';
+      r.onclick=function(){ createState.category=cat; createState.step='subcategory'; renderCreateStep(); };
+      body.appendChild(r);
+    });
+  } else if(createState.step==='subcategory'){
+    titleEl.textContent=createState.category;
+    body.innerHTML='<div class="step-indicator">Step 3 of 4 · Choose a subcategory</div>';
+    CATEGORIES[createState.category].forEach(function(sub){
+      const r=document.createElement('div'); r.className='row';
+      r.innerHTML='<span>'+escapeHTML(sub)+'</span><span class="arrow">›</span>';
+      r.onclick=function(){ createState.subcategory=sub; createState.step='form'; renderCreateStep(); };
+      body.appendChild(r);
+    });
+  } else if(createState.step==='form'){
+    titleEl.textContent='Listing Details';
+    const extra=FIELD_CONFIG[createState.type.id]||[];
+    let html='<div class="step-indicator">Step 4 of 4 · '+escapeHTML(createState.category)+' › '+escapeHTML(createState.subcategory)+'</div>';
+    html+=field('title','Listing Title','text','e.g. Logo design for a cafe brand');
+    html+=field('desc','Description','textarea','Describe what you are offering or selling');
+    extra.forEach(function(f){ html+=field(f.k, f.label, f.type, f.ph); });
+    html+=field('country','Country','text','e.g. Bangladesh');
+    html+=field('city','City / Region','text','e.g. Dhaka');
+    html+='<div id="formError" class="field-error"></div><button class="submit-btn" onclick="submitListing()">Publish Listing</button>';
+    body.innerHTML=html;
+  }
+}
+function field(key,label,type,ph){
+  const input = type==='textarea'
+    ? '<textarea class="field-textarea" id="cf_'+key+'" placeholder="'+escapeHTML(ph)+'"></textarea>'
+    : '<input class="field-input" id="cf_'+key+'" type="text" placeholder="'+escapeHTML(ph)+'">';
+  return '<div class="field-group"><div class="field-label">'+escapeHTML(label)+'</div>'+input+'</div>';
+}
+async function submitListing(){
+  const title=(document.getElementById('cf_title').value||'').trim();
+  const desc=(document.getElementById('cf_desc').value||'').trim();
+  if(!title || !desc){ document.getElementById('formError').textContent='Title and description are required.'; return; }
+  const extra=FIELD_CONFIG[createState.type.id]||[];
+  const extraData={};
+  extra.forEach(function(f){ extraData[f.k]=(document.getElementById('cf_'+f.k).value||'').trim(); });
+  const country=(document.getElementById('cf_country').value||'').trim();
+  const city=(document.getElementById('cf_city').value||'').trim();
+  let priceDisplay = extraData.priceField || 'Negotiable';
+  if(priceDisplay && priceDisplay.charAt(0)!=='৳' && /\d/.test(priceDisplay) && !/[a-zA-Z]/.test(priceDisplay.replace(/per|unit/gi,''))) priceDisplay='৳'+priceDisplay;
+  const post={
+    icon: createState.type.icon, title:title, price:priceDisplay, desc:desc, zone:createState.type.zone,
+    listingType:createState.type.id, listingTypeName:createState.type.name,
+    category:createState.category, subcategory:createState.subcategory, categoryName:createState.category+' · '+createState.subcategory,
+    country:country, city:city, extra:extraData,
+    ownerId:currentUser.uid, ownerName:currentUserName
+  };
+  try{
+    const withTime=Object.assign({}, post, {createdAt: firebase.firestore.FieldValue.serverTimestamp()});
+    await window.fbDb.collection('posts').add(withTime);
+    await loadSharedPosts();
+    alert('Posted! Everyone can see it now.');
+    setNav('jobs');
+  }catch(e){
+    document.getElementById('formError').textContent='Failed to post: '+(e.message||e.code);
+  }
+}
+function renderMyPosts(){
+  const wrap=document.getElementById('myPostsArea');
+  if(!wrap) return;
+  wrap.innerHTML='';
+  const mine = currentUser ? sharedPosts.filter(function(p){return p.ownerId===currentUser.uid;}) : [];
+  if(mine.length===0){
+    wrap.innerHTML='<div class="empty-state"><div class="big">📌</div><div class="title">You have no posts yet</div><div>Tap the button above to add your first post (login required)</div></div>';
+    return;
+  }
+  mine.forEach(function(item){
+    const card=document.createElement('div');
+    card.className='card';
+    card.onclick=function(){openDetail(item);};
+    const myMeta = item.categoryName || (item.zone==='work'?'Work Zone':'Shop Zone');
+    card.innerHTML='<div class="thumb">'+escapeHTML(item.icon)+'</div><div class="card-body"><div class="demo-tag">Live</div><div class="card-title">'+escapeHTML(item.title)+'</div><div class="card-meta"><span>'+escapeHTML(myMeta)+'</span></div></div><div class="price">'+escapeHTML(item.price)+'</div>';
+    wrap.appendChild(card);
+  });
+}
+let authMode='login';
+function togglePassEye(){
+  const inp = document.getElementById('authPass');
+  const icon = document.getElementById('passEyeIcon');
+  if(inp.type === 'password'){ inp.type = 'text'; icon.style.opacity = '1'; icon.textContent = '🙈'; }
+  else { inp.type = 'password'; icon.style.opacity = '0.6'; icon.textContent = '👁️'; }
+}
+function toggleAuthMode(){
+  authMode = authMode==='login' ? 'signup' : 'login';
+  document.getElementById('authNameWrap').style.display = authMode==='signup' ? 'block':'none';
+  document.getElementById('authTitle').textContent = authMode==='signup' ? 'Sign Up' : 'Log In';
+  document.getElementById('authSubmitBtn').textContent = authMode==='signup' ? 'Create Account' : 'Log In';
+  document.getElementById('authSwitchText').textContent = authMode==='signup' ? 'Already have an account?' : "Don't have an account?";
+  document.getElementById('authSwitchLink').textContent = authMode==='signup' ? 'Log In' : 'Sign Up';
+  document.getElementById('authError').textContent='';
+}
+function openAuth(){ show('auth-screen'); }
+async function submitAuth(){
+  const email=document.getElementById('authEmail').value.trim();
+  const pass=document.getElementById('authPass').value;
+  const name=document.getElementById('authName').value.trim();
+  const errEl=document.getElementById('authError');
+  errEl.textContent='';
+  if(!window.fbReady){ errEl.textContent='Connecting, please try again shortly'; return; }
+  if(!email || !pass){ errEl.textContent='Please enter email and password'; return; }
+  try{
+    if(authMode==='signup'){
+      const cred = await window.fbAuth.createUserWithEmailAndPassword(email, pass);
+      currentUserName = name || email.split('@')[0];
+      localStorage.setItem('aw_myname_'+cred.user.uid, currentUserName);
+    } else {
+      const cred = await window.fbAuth.signInWithEmailAndPassword(email, pass);
+      currentUserName = localStorage.getItem('aw_myname_'+cred.user.uid) || email.split('@')[0];
+    }
+    try{
+      await window.fbDb.collection('users').doc(window.fbAuth.currentUser.uid).set({
+        name: currentUserName, email: email, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, {merge:true});
+    }catch(e){ /* profile save failed, non-critical */ }
+    backToMain(); setNav('profile');
+  }catch(e){
+    errEl.textContent = 'Error: ' + (e.message || e.code || 'please try again');
+  }
+}
+function doLogout(){ if(window.fbAuth) window.fbAuth.signOut(); renderProfile(); backToMain(); }
+
+let currentUserName='';
+let currentUser=null;
+let myBlockedUids=new Set();   // people I have blocked
+let blockedMeUids=new Set();   // people who have blocked me
+
+async function loadBlockState(){
+  if(!currentUser){ myBlockedUids=new Set(); blockedMeUids=new Set(); return; }
+  try{
+    const mine = await window.fbDb.collection('blocks').where('blockerId','==',currentUser.uid).get();
+    myBlockedUids = new Set(mine.docs.map(function(d){ return d.data().blockedId; }));
+    const against = await window.fbDb.collection('blocks').where('blockedId','==',currentUser.uid).get();
+    blockedMeUids = new Set(against.docs.map(function(d){ return d.data().blockerId; }));
+  }catch(e){ /* non-critical if this fails to load */ }
+}
+
+function isBlockedEitherWay(uid){
+  return myBlockedUids.has(uid) || blockedMeUids.has(uid);
+}
+
+async function blockUserId(targetUid, targetName){
+  if(!currentUser){ openAuth(); return; }
+  if(targetUid===currentUser.uid) return;
+  if(!confirm('Block '+targetName+'? They won\'t be able to message you, and you won\'t see each other\'s posts or profile in Connect.')) return;
+  try{
+    await window.fbDb.collection('blocks').doc(currentUser.uid+'_'+targetUid).set({
+      blockerId: currentUser.uid, blockedId: targetUid, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    myBlockedUids.add(targetUid);
+    alert(targetName+' has been blocked.');
+    if(document.getElementById('connect-screen').classList.contains('active')){ renderConnectList(); loadFeed(); }
+    if(document.getElementById('messages-screen').classList.contains('active')){ loadConversations(); }
+  }catch(e){ alert('Could not block: '+(e.message||e.code)); }
+}
+
+async function unblockUserId(targetUid){
+  if(!currentUser) return;
+  try{
+    await window.fbDb.collection('blocks').doc(currentUser.uid+'_'+targetUid).delete();
+    myBlockedUids.delete(targetUid);
+    renderBlockedList();
+  }catch(e){ alert('Could not unblock: '+(e.message||e.code)); }
+}
+
+async function reportContent(targetType, targetId, targetLabel){
+  if(!currentUser){ openAuth(); return; }
+  const reason = prompt('Why are you reporting this '+targetType+'? (spam, scam, abuse, etc.)');
+  if(!reason || !reason.trim()) return;
+  try{
+    await window.fbDb.collection('reports').add({
+      reporterId: currentUser.uid, targetType: targetType, targetId: targetId, targetLabel: targetLabel||'',
+      reason: reason.trim().slice(0,500), createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    alert('Report submitted. Thank you — our team will review it.');
+  }catch(e){ alert('Could not submit report: '+(e.message||e.code)); }
+}
+
+async function renderBlockedList(){
+  const wrap=document.getElementById('blockedUsersList');
+  if(!wrap) return;
+  if(myBlockedUids.size===0){ wrap.innerHTML='<div class="empty-state"><div class="big">🚫</div><div class="title">No blocked users</div></div>'; return; }
+  wrap.innerHTML='<div class="empty-state"><div class="big">⏳</div><div class="title">Loading…</div></div>';
+  try{
+    const rows=[];
+    for(const uid of myBlockedUids){
+      const doc = await window.fbDb.collection('users').doc(uid).get();
+      const name = doc.exists ? (doc.data().name||'User') : 'User';
+      rows.push({uid:uid, name:name});
+    }
+    wrap.innerHTML='';
+    rows.forEach(function(r){
+      const row=document.createElement('div'); row.className='account-chip';
+      row.innerHTML='<div class="avatar">'+escapeHTML(r.name.charAt(0).toUpperCase())+'</div><div style="flex:1;"><div class="chip-name">'+escapeHTML(r.name)+'</div></div><button class="add-account-btn" style="margin:0; width:auto; padding:7px 12px; font-size:12px;" onclick="unblockUserId(\''+r.uid+'\')">Unblock</button>';
+      wrap.appendChild(row);
+    });
+  }catch(e){ wrap.innerHTML='<div class="empty-state"><div class="big">⚠️</div><div class="title">Could not load blocked users</div></div>'; }
+}
+function initAuthWatch(){
+  const tryBind=setInterval(function(){
+    if(window.fbReady){
+      clearInterval(tryBind);
+      window.fbAuth.onAuthStateChanged(function(user){
+        currentUser=user;
+        if(user) currentUserName = localStorage.getItem('aw_myname_'+user.uid) || (user.email? user.email.split('@')[0]:'User');
+        else if(typeof unsubChatMessages!=='undefined' && unsubChatMessages){ unsubChatMessages(); unsubChatMessages=null; activeChat=null; }
+        loadBlockState();
+        if(document.getElementById('profile-screen').classList.contains('active')) renderProfile();
+      });
+      loadSharedPosts();
+      checkFeedDeepLink();
+    }
+  },200);
+}
+initAuthWatch();
+
+let sharedPosts=[];
+async function loadSharedPosts(){
+  try{
+    const snap = await window.fbDb.collection('posts').orderBy('createdAt','desc').limit(50).get();
+    sharedPosts = snap.docs.map(function(d){ const v=d.data(); v.id=d.id; v.shared=true; return v; });
+    renderList(); renderMyPosts();
+  }catch(e){ /* collection empty on first run, ignore */ }
+}
+
+let currentDetailItem=null;
+function openDetail(item){
+  currentDetailItem = item;
+  const tagText = item.shared ? 'Live post — visible to everyone' : 'Demo listing — not real';
+  let extraHtml='';
+  if(item.categoryName) extraHtml += '<div class="field-label" style="margin-top:12px;">'+escapeHTML(item.listingTypeName||'')+' · '+escapeHTML(item.categoryName)+'</div>';
+  if(item.country || item.city) extraHtml += '<div class="field-label">'+escapeHTML([item.city,item.country].filter(Boolean).join(', '))+'</div>';
+  if(item.extra){
+    Object.keys(item.extra).forEach(function(k){
+      if(item.extra[k] && k!=='priceField') extraHtml += '<div class="field-label" style="margin-top:6px;">'+escapeHTML(k)+': <span style="color:var(--text);">'+escapeHTML(item.extra[k])+'</span></div>';
+    });
+  }
+  document.getElementById('detailBody').innerHTML=`
+    <div class="demo-tag">${tagText}</div>
+    <div class="detail-thumb">${escapeHTML(item.icon)}</div>
+    <div class="detail-title">${escapeHTML(item.title)}</div>
+    <div class="detail-price">${escapeHTML(item.price)}</div>
+    <div class="detail-desc">${escapeHTML(item.desc)}</div>
+    ${extraHtml}
+    <button class="contact-btn" onclick="contactSeller()">Contact</button>
+    ${(item.shared && item.id && currentUser && item.ownerId!==currentUser.uid) ? '<button style="display:block; margin:10px auto 0; background:none; border:none; color:var(--muted); font-size:12px; cursor:pointer; font-family:inherit;" onclick="reportContent(\'listing\',\''+item.id+'\',\''+(item.title||'').replace(/'/g,"")+'\')">🚩 Report this listing</button>' : ''}`;
+  show('detail');
+}
+
+/* ---------- Messaging ---------- */
+let activeChat=null; // {convId, otherUid, otherName}
+let unsubChatMessages=null;
+
+function convIdFor(uidA, uidB){ return [uidA, uidB].sort().join('_'); }
+
+function timeAgoShort(date){
+  if(!date) return '';
+  const diffMs = Date.now() - date.getTime();
+  const mins = Math.floor(diffMs/60000);
+  if(mins < 1) return 'now';
+  if(mins < 60) return mins+'m';
+  const hrs = Math.floor(mins/60);
+  if(hrs < 24) return hrs+'h';
+  const days = Math.floor(hrs/24);
+  if(days < 7) return days+'d';
+  return date.toLocaleDateString();
+}
+
+function contactSeller(){
+  if(!currentUser){ alert('Please log in first to contact.'); openAuth(); return; }
+  const item = currentDetailItem;
+  if(!item || !item.shared || !item.ownerId){ alert('This is a demo listing — contacting is only available on real, live listings.'); return; }
+  if(item.ownerId === currentUser.uid){ alert("You can't message yourself — this is your own listing."); return; }
+  openChatWith(item.ownerId, item.ownerName||'User', item.id||null, item.title||'');
+}
+
+async function openChatWith(otherUid, otherName, listingId, listingTitle){
+  if(!currentUser){ openAuth(); return; }
+  if(otherUid === currentUser.uid){ alert("You can't message yourself."); return; }
+  if(isBlockedEitherWay(otherUid)){ alert("You can't message this user."); return; }
+  const convId = convIdFor(currentUser.uid, otherUid);
+  activeChat = {convId: convId, otherUid: otherUid, otherName: otherName};
+  document.getElementById('chatTitle').textContent = otherName;
+  const ctxBar = document.getElementById('chatContextBar');
+  document.getElementById('chatMessages').innerHTML = '<div class="empty-state"><div class="big">⏳</div><div class="title">Loading…</div></div>';
+  show('chat-screen');
+  try{
+    const convRef = window.fbDb.collection('conversations').doc(convId);
+    const convSnap = await convRef.get();
+    if(!convSnap.exists){
+      const names={}; names[currentUser.uid]=currentUserName; names[otherUid]=otherName;
+      await convRef.set({
+        participants:[currentUser.uid, otherUid],
+        participantNames: names,
+        listingId: listingId||null, listingTitle: listingTitle||null,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        lastMessage:'', lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(), lastSenderId:null
+      });
+    }
+    const data = convSnap.exists ? convSnap.data() : null;
+    if(data && data.listingTitle){ ctxBar.style.display='block'; ctxBar.textContent='About: '+data.listingTitle; }
+    else if(listingTitle){ ctxBar.style.display='block'; ctxBar.textContent='About: '+listingTitle; }
+    else { ctxBar.style.display='none'; }
+    listenToMessages(convId);
+  }catch(e){
+    document.getElementById('chatMessages').innerHTML = '<div class="empty-state"><div class="big">⚠️</div><div class="title">Could not open chat</div><div>'+escapeHTML(e.message||'Please try again')+'</div></div>';
+  }
+}
+
+function listenToMessages(convId){
+  if(unsubChatMessages){ unsubChatMessages(); unsubChatMessages=null; }
+  const q = window.fbDb.collection('conversations').doc(convId).collection('messages').orderBy('createdAt','asc').limit(200);
+  unsubChatMessages = q.onSnapshot(function(snap){
+    const wrap=document.getElementById('chatMessages');
+    if(snap.empty){
+      wrap.innerHTML='<div class="empty-state"><div class="big">💬</div><div class="title">No messages yet</div><div>Say hello to start the conversation</div></div>';
+      return;
+    }
+    wrap.innerHTML='';
+    snap.forEach(function(doc){
+      const m=doc.data();
+      const mine = m.senderId===currentUser.uid;
+      const row=document.createElement('div');
+      row.className='msg-row '+(mine?'mine':'theirs');
+      const t = m.createdAt && m.createdAt.toDate ? m.createdAt.toDate() : null;
+      const timeStr = t ? t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : 'sending…';
+      row.innerHTML='<div><div class="msg-bubble">'+escapeHTML(m.text)+'</div><div class="msg-time">'+escapeHTML(timeStr)+'</div></div>';
+      wrap.appendChild(row);
+    });
+    wrap.scrollTop = wrap.scrollHeight;
+  }, function(err){
+    document.getElementById('chatMessages').innerHTML = '<div class="empty-state"><div class="big">⚠️</div><div class="title">Could not load messages</div><div>'+escapeHTML(err.message||'')+'</div></div>';
+  });
+}
+
+async function sendChatMessage(){
+  if(!activeChat || !currentUser) return;
+  const input=document.getElementById('chatInput');
+  const text=(input.value||'').trim();
+  if(!text) return;
+  const btn=document.getElementById('chatSendBtn');
+  btn.disabled=true; input.value='';
+  try{
+    const convRef = window.fbDb.collection('conversations').doc(activeChat.convId);
+    await convRef.collection('messages').add({
+      senderId: currentUser.uid, text: text, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await convRef.update({
+      lastMessage: text.slice(0,120), lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(), lastSenderId: currentUser.uid
+    });
+  }catch(e){
+    alert('Message failed to send: '+(e.message||e.code));
+    input.value=text;
+  }
+  btn.disabled=false;
+}
+
+function closeChatScreen(){
+  if(unsubChatMessages){ unsubChatMessages(); unsubChatMessages=null; }
+  activeChat=null;
+  setNav('messages');
+}
+
+async function loadConversations(){
+  const wrap=document.getElementById('convListWrap');
+  if(!currentUser){
+    wrap.innerHTML='<div class="empty-state"><div class="big">💬</div><div class="title">Log in to see your messages</div><div>Your conversations will appear here</div></div>';
+    return;
+  }
+  wrap.innerHTML='<div class="empty-state"><div class="big">⏳</div><div class="title">Loading…</div></div>';
+  try{
+    const snap = await window.fbDb.collection('conversations').where('participants','array-contains',currentUser.uid).get();
+    if(snap.empty){
+      wrap.innerHTML='<div class="empty-state"><div class="big">💬</div><div class="title">No messages yet</div><div>Conversations will appear here once you contact a listing</div></div>';
+      return;
+    }
+    let convs=[];
+    snap.forEach(function(doc){
+      const d=doc.data(); d.id=doc.id;
+      convs.push(d);
+    });
+    convs.sort(function(a,b){
+      const ta = a.lastMessageAt && a.lastMessageAt.toMillis ? a.lastMessageAt.toMillis() : 0;
+      const tb = b.lastMessageAt && b.lastMessageAt.toMillis ? b.lastMessageAt.toMillis() : 0;
+      return tb-ta;
+    });
+    wrap.innerHTML='';
+    convs.forEach(function(c){
+      const otherUid = c.participants.find(function(p){ return p!==currentUser.uid; });
+      const otherName = (c.participantNames && c.participantNames[otherUid]) || 'User';
+      const t = c.lastMessageAt && c.lastMessageAt.toDate ? c.lastMessageAt.toDate() : null;
+      const row=document.createElement('div'); row.className='conv-row';
+      row.innerHTML='<div class="avatar">'+escapeHTML((otherName||'?').charAt(0).toUpperCase())+'</div>'
+        +'<div class="conv-info"><div class="conv-name">'+escapeHTML(otherName)+'</div>'
+        +'<div class="conv-preview">'+escapeHTML(c.lastMessage||'Say hello 👋')+'</div>'
+        +(c.listingTitle ? '<div class="conv-context">Re: '+escapeHTML(c.listingTitle)+'</div>' : '')
+        +'</div><div class="conv-meta">'+escapeHTML(timeAgoShort(t))+'</div>';
+      row.onclick=function(){ openChatWith(otherUid, otherName, c.listingId, c.listingTitle); };
+      wrap.appendChild(row);
+    });
+  }catch(e){
+    wrap.innerHTML='<div class="empty-state"><div class="big">⚠️</div><div class="title">Could not load messages</div><div>'+escapeHTML(e.message||'Please try again')+'</div></div>';
+  }
+}
+
+/* ---------- Social Feed ---------- */
+let currentPostDetailId=null;
+let feedComposerFile=null;
+const FEED_IMAGE_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+const FEED_IMAGE_TYPES = ['image/jpeg','image/png','image/webp'];
+
+function onFeedImageSelected(evt){
+  const file = evt.target.files && evt.target.files[0];
+  const errEl = document.getElementById('feedComposerError');
+  errEl.textContent='';
+  if(!file) return;
+  if(FEED_IMAGE_TYPES.indexOf(file.type) === -1){
+    errEl.textContent = 'Only JPEG, PNG or WebP images are allowed.';
+    evt.target.value=''; return;
+  }
+  if(file.size > FEED_IMAGE_MAX_BYTES){
+    errEl.textContent = 'Image is too large. Maximum size is 5 MB.';
+    evt.target.value=''; return;
+  }
+  feedComposerFile = file;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    document.getElementById('feedImagePreview').src = e.target.result;
+    document.getElementById('feedImagePreviewWrap').style.display='block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeFeedImage(){
+  feedComposerFile = null;
+  document.getElementById('feedImageInput').value='';
+  document.getElementById('feedImagePreviewWrap').style.display='none';
+  document.getElementById('feedImagePreview').src='';
+}
+
+async function submitFeedPost(){
+  if(!currentUser){ alert('Please log in first to post.'); openAuth(); return; }
+  const input=document.getElementById('feedComposerInput');
+  const text=(input.value||'').trim();
+  const errEl=document.getElementById('feedComposerError');
+  errEl.textContent='';
+  if(!text && !feedComposerFile){ errEl.textContent='Write something or add a photo first.'; return; }
+  const postBtn=document.getElementById('feedPostBtn');
+  postBtn.disabled=true;
+  try{
+    let imageUrl=null, imagePath=null;
+    if(feedComposerFile){
+      const progWrap=document.getElementById('feedUploadProgressWrap');
+      const progBar=document.getElementById('feedUploadProgressBar');
+      progWrap.style.display='block'; progBar.style.width='0%';
+      const ext = feedComposerFile.type==='image/png'?'png':(feedComposerFile.type==='image/webp'?'webp':'jpg');
+      imagePath = 'feedImages/'+currentUser.uid+'/'+Date.now()+'.'+ext;
+      const ref = window.fbStorage.ref(imagePath);
+      const task = ref.put(feedComposerFile, {contentType: feedComposerFile.type});
+      await new Promise(function(resolve, reject){
+        task.on('state_changed', function(snap){
+          const pct = Math.round((snap.bytesTransferred/snap.totalBytes)*100);
+          progBar.style.width = pct+'%';
+        }, reject, resolve);
+      });
+      imageUrl = await task.snapshot.ref.getDownloadURL();
+      progWrap.style.display='none';
+    }
+    const postData = {
+      authorId: currentUser.uid, authorName: currentUserName, text: text,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    if(imageUrl){ postData.imageUrl=imageUrl; postData.imagePath=imagePath; }
+    await window.fbDb.collection('feedPosts').add(postData);
+    input.value='';
+    removeFeedImage();
+    loadFeed();
+  }catch(e){
+    errEl.textContent = 'Failed to post: '+(e.message||e.code);
+    document.getElementById('feedUploadProgressWrap').style.display='none';
+  }
+  postBtn.disabled=false;
+}
+
+async function buildFeedCard(p){
+  const likesSnap = await window.fbDb.collection('feedPosts').doc(p.id).collection('likes').get();
+  const likeCount = likesSnap.size;
+  const likedByMe = !!(currentUser && likesSnap.docs.some(function(d){ return d.id===currentUser.uid; }));
+  const commentsSnap = await window.fbDb.collection('feedPosts').doc(p.id).collection('comments').get();
+  const commentCount = commentsSnap.size;
+  const t = p.createdAt && p.createdAt.toDate ? p.createdAt.toDate() : null;
+  const card=document.createElement('div'); card.className='feed-card';
+  const imgHtml = p.imageUrl ? '<img src="'+escapeHTML(p.imageUrl)+'" style="max-width:100%; border-radius:10px; margin-bottom:10px; display:block;" loading="lazy">' : '';
+  card.innerHTML = '<div class="feed-head"><div class="avatar">'+escapeHTML((p.authorName||'?').charAt(0).toUpperCase())+'</div><div><div class="feed-author">'+escapeHTML(p.authorName||'User')+'</div><div class="feed-time">'+escapeHTML(timeAgoShort(t))+'</div></div></div>'
+    +(p.text ? '<div class="feed-text">'+escapeHTML(p.text)+'</div>' : '')
+    +imgHtml
+    +'<div class="feed-actions">'
+    +'<button class="feed-action-btn '+(likedByMe?'liked':'')+'" onclick="event.stopPropagation(); toggleLike(\''+p.id+'\', this)">'+(likedByMe?'❤️':'🤍')+' <span class="likeCountSpan">'+likeCount+'</span></button>'
+    +'<button class="feed-action-btn" onclick="event.stopPropagation(); openPostDetail(\''+p.id+'\')">💬 '+commentCount+'</button>'
+    +'<button class="feed-action-btn" onclick="event.stopPropagation(); sharePost(\''+p.id+'\')">🔗 Share</button>'
+    +(currentUser && p.authorId===currentUser.uid
+        ? '<button class="feed-delete-btn" onclick="event.stopPropagation(); deleteFeedPost(\''+p.id+'\')">Delete</button>'
+        : (currentUser ? '<button class="feed-delete-btn" style="color:var(--muted);" onclick="event.stopPropagation(); reportContent(\'post\',\''+p.id+'\',\'Feed post\')">Report</button><button class="feed-delete-btn" onclick="event.stopPropagation(); blockUserId(\''+p.authorId+'\',\''+(p.authorName||'User').replace(/'/g,"")+'\')">Block</button>' : '')
+      )
+    +'</div>';
+  card.onclick=function(){ openPostDetail(p.id); };
+  return card;
+}
+
+async function loadFeed(){
+  const wrap=document.getElementById('feedList');
+  if(!wrap) return;
+  wrap.innerHTML='<div class="empty-state"><div class="big">⏳</div><div class="title">Loading…</div></div>';
+  try{
+    const snap = await window.fbDb.collection('feedPosts').orderBy('createdAt','desc').limit(50).get();
+    const visibleDocs = snap.docs.filter(function(doc){ return !isBlockedEitherWay(doc.data().authorId); });
+    if(visibleDocs.length===0){ wrap.innerHTML='<div class="empty-state"><div class="big">📝</div><div class="title">No posts yet</div><div>Be the first to share something</div></div>'; return; }
+    wrap.innerHTML='';
+    for(const doc of visibleDocs){
+      const p=doc.data(); p.id=doc.id;
+      wrap.appendChild(await buildFeedCard(p));
+    }
+  }catch(e){
+    wrap.innerHTML='<div class="empty-state"><div class="big">⚠️</div><div class="title">Could not load feed</div><div>'+escapeHTML(e.message||'')+'</div></div>';
+  }
+}
+
+async function toggleLike(postId, btnEl){
+  if(!currentUser){ alert('Please log in to like posts.'); openAuth(); return; }
+  const likeRef = window.fbDb.collection('feedPosts').doc(postId).collection('likes').doc(currentUser.uid);
+  const isLiked = btnEl.classList.contains('liked');
+  const span = btnEl.querySelector('.likeCountSpan');
+  const oldCount = parseInt(span.textContent)||0;
+  try{
+    if(isLiked){
+      await likeRef.delete();
+      btnEl.classList.remove('liked');
+      btnEl.innerHTML = '🤍 <span class="likeCountSpan">'+Math.max(0,oldCount-1)+'</span>';
+    } else {
+      await likeRef.set({likedAt: firebase.firestore.FieldValue.serverTimestamp()});
+      btnEl.classList.add('liked');
+      btnEl.innerHTML = '❤️ <span class="likeCountSpan">'+(oldCount+1)+'</span>';
+    }
+  }catch(e){ alert('Failed: '+(e.message||e.code)); }
+}
+
+async function deleteFeedPost(postId){
+  if(!confirm('Delete this post? This cannot be undone.')) return;
+  try{
+    const docRef = window.fbDb.collection('feedPosts').doc(postId);
+    const doc = await docRef.get();
+    const data = doc.exists ? doc.data() : null;
+    await docRef.delete();
+    if(data && data.imagePath){
+      try{ await window.fbStorage.ref(data.imagePath).delete(); }catch(e){ /* image cleanup best-effort, not critical */ }
+    }
+    loadFeed();
+  }catch(e){ alert('Failed to delete: '+(e.message||e.code)); }
+}
+
+function sharePost(postId){
+  const url = location.origin + location.pathname + '?post=' + postId;
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(function(){ alert('Link copied! Share it with anyone — opening it jumps straight to this post.'); })
+      .catch(function(){ prompt('Copy this link to share:', url); });
+  } else {
+    prompt('Copy this link to share:', url);
+  }
+}
+
+async function openPostDetail(postId){
+  currentPostDetailId = postId;
+  show('post-detail-screen');
+  document.getElementById('postDetailCard').innerHTML='<div class="empty-state"><div class="big">⏳</div><div class="title">Loading…</div></div>';
+  document.getElementById('commentsList').innerHTML='';
+  try{
+    const doc = await window.fbDb.collection('feedPosts').doc(postId).get();
+    if(!doc.exists){ document.getElementById('postDetailCard').innerHTML='<div class="empty-state"><div class="big">⚠️</div><div class="title">Post not found</div><div>It may have been deleted</div></div>'; return; }
+    const p=doc.data(); p.id=doc.id;
+    const card = await buildFeedCard(p);
+    card.onclick=null; card.style.cursor='default';
+    const wrap=document.getElementById('postDetailCard'); wrap.innerHTML=''; wrap.appendChild(card);
+    loadComments(postId);
+  }catch(e){
+    document.getElementById('postDetailCard').innerHTML='<div class="empty-state"><div class="big">⚠️</div><div class="title">Could not load post</div></div>';
+  }
+}
+
+async function loadComments(postId){
+  const wrap=document.getElementById('commentsList');
+  wrap.innerHTML='<div class="empty-state"><div class="big">⏳</div><div class="title">Loading…</div></div>';
+  try{
+    const snap = await window.fbDb.collection('feedPosts').doc(postId).collection('comments').orderBy('createdAt','asc').limit(200).get();
+    if(snap.empty){ wrap.innerHTML='<div class="empty-state"><div class="big">💬</div><div class="title">No comments yet</div><div>Be the first to comment</div></div>'; return; }
+    wrap.innerHTML='';
+    snap.forEach(function(doc){
+      const c=doc.data();
+      const t = c.createdAt && c.createdAt.toDate ? c.createdAt.toDate() : null;
+      const row=document.createElement('div'); row.className='comment-row';
+      let html = '<div class="comment-head"><span class="comment-author">'+escapeHTML(c.authorName||'User')+'</span><span class="comment-time">'+escapeHTML(timeAgoShort(t))+'</span></div>'
+        +'<div class="comment-text">'+escapeHTML(c.text)+'</div>';
+      if(currentUser && c.authorId===currentUser.uid){
+        html += '<button class="comment-delete" onclick="deleteComment(\''+postId+'\',\''+doc.id+'\')">Delete</button>';
+      }
+      row.innerHTML = html;
+      wrap.appendChild(row);
+    });
+  }catch(e){
+    wrap.innerHTML='<div class="empty-state"><div class="big">⚠️</div><div class="title">Could not load comments</div></div>';
+  }
+}
+
+async function submitComment(){
+  if(!currentUser){ alert('Please log in to comment.'); openAuth(); return; }
+  if(!currentPostDetailId) return;
+  const input=document.getElementById('commentInput');
+  const text=(input.value||'').trim();
+  if(!text) return;
+  input.value='';
+  try{
+    await window.fbDb.collection('feedPosts').doc(currentPostDetailId).collection('comments').add({
+      authorId: currentUser.uid, authorName: currentUserName, text: text,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    loadComments(currentPostDetailId);
+  }catch(e){ alert('Failed to comment: '+(e.message||e.code)); input.value=text; }
+}
+
+async function deleteComment(postId, commentId){
+  if(!confirm('Delete this comment?')) return;
+  try{
+    await window.fbDb.collection('feedPosts').doc(postId).collection('comments').doc(commentId).delete();
+    loadComments(postId);
+  }catch(e){ alert('Failed to delete: '+(e.message||e.code)); }
+}
+
+function checkFeedDeepLink(){
+  try{
+    const params = new URLSearchParams(location.search);
+    const postId = params.get('post');
+    if(postId){ openPostDetail(postId); }
+  }catch(e){}
+}
+
+function setNav(target){
+  state.nav=target;
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  if(target==='search'){ show('main'); renderList();
+    document.querySelectorAll('#main .nav-item')[0].classList.add('active');
+  } else if(target==='jobs'){ show('jobs-screen'); renderMyPosts(); }
+  else if(target==='connect'){ show('connect-screen'); renderConnect(); loadFeed(); }
+  else if(target==='messages'){ show('messages-screen'); loadConversations(); }
+  else if(target==='profile'){ show('profile-screen'); renderProfile(); }
+}
+
+function renderProfile(){
+  const wrap=document.getElementById('accountList');
+  if(currentUser){
+    document.getElementById('activeName').textContent = currentUserName;
+    document.getElementById('activeSub').textContent = (currentUser.email||'') + ' · Logged in';
+    document.getElementById('activeAvatar').textContent = currentUserName.charAt(0).toUpperCase();
+    wrap.innerHTML = '<div class="account-chip"><div class="avatar">'+escapeHTML(currentUserName.charAt(0).toUpperCase())+'</div><div><div class="chip-name">'+escapeHTML(currentUserName)+'</div><div class="chip-sub">'+escapeHTML(currentUser.email||'')+'</div></div><div class="active-dot"></div></div>';
+  } else {
+    document.getElementById('activeName').textContent = 'Not logged in';
+    document.getElementById('activeSub').textContent = 'Log in to post or view your profile';
+    document.getElementById('activeAvatar').textContent = '?';
+    wrap.innerHTML = '';
+  }
+  renderBlockedList();
+}
+
+let myOutgoing=[], myIncoming=[], cachedPeople=[];
+
+async function loadMyConnections(){
+  if(!currentUser){ myOutgoing=[]; myIncoming=[]; return; }
+  try{
+    const outSnap = await window.fbDb.collection('friendRequests').where('fromUid','==',currentUser.uid).get();
+    const inSnap = await window.fbDb.collection('friendRequests').where('toUid','==',currentUser.uid).get();
+    myOutgoing = outSnap.docs.map(function(d){ const v=d.data(); v.id=d.id; return v; });
+    myIncoming = inSnap.docs.map(function(d){ const v=d.data(); v.id=d.id; return v; });
+  }catch(e){ myOutgoing=[]; myIncoming=[]; }
+}
+
+function connectionStatusWith(uid){
+  const out = myOutgoing.find(function(r){return r.toUid===uid;});
+  if(out) return out.status==='accepted' ? 'friends' : (out.status==='pending' ? 'pending' : null);
+  const inc = myIncoming.find(function(r){return r.fromUid===uid;});
+  if(inc) return inc.status==='accepted' ? 'friends' : (inc.status==='pending' ? 'incoming' : null);
+  return null;
+}
+
+async function sendFriendRequest(toUid, toName){
+  if(!currentUser){ openAuth(); return; }
+  try{
+    await window.fbDb.collection('friendRequests').add({
+      fromUid: currentUser.uid, fromName: currentUserName, toUid: toUid, toName: toName,
+      status:'pending', createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await loadMyConnections();
+    renderConnectList(); renderRequestsSection();
+  }catch(e){ alert('Could not send request: '+(e.message||e.code)); }
+}
+
+async function respondRequest(reqId, accept){
+  try{
+    await window.fbDb.collection('friendRequests').doc(reqId).update({status: accept?'accepted':'declined'});
+    await loadMyConnections();
+    renderRequestsSection(); renderConnectList();
+  }catch(e){ alert('Action failed: '+(e.message||e.code)); }
+}
+
+function renderRequestsSection(){
+  const wrap=document.getElementById('requestsSection');
+  const list=document.getElementById('requestsList');
+  const pending = myIncoming.filter(function(r){return r.status==='pending';});
+  if(!currentUser || pending.length===0){ wrap.style.display='none'; return; }
+  wrap.style.display='block';
+  list.innerHTML='';
+  pending.forEach(function(r){
+    const row=document.createElement('div');
+    row.className='account-chip';
+    row.innerHTML='<div class="avatar">'+escapeHTML((r.fromName||'?').charAt(0).toUpperCase())+'</div><div style="flex:1;"><div class="chip-name">'+escapeHTML(r.fromName||'User')+'</div><div class="chip-sub">wants to connect</div></div><div style="display:flex; gap:6px;"><button class="add-account-btn" style="margin:0; width:auto; padding:7px 12px; font-size:12px;" onclick="respondRequest(\''+r.id+'\', true)">Accept</button><button class="add-account-btn" style="margin:0; width:auto; padding:7px 12px; font-size:12px; color:var(--muted); border-color:var(--border);" onclick="respondRequest(\''+r.id+'\', false)">Decline</button></div>';
+    list.appendChild(row);
+  });
+}
+
+function renderConnectList(){
+  const listEl=document.getElementById('connectList');
+  if(cachedPeople.length===0){
+    listEl.innerHTML = '<div class="empty-state"><div class="big">🧑‍🤝‍🧑</div><div class="title">No one here yet</div><div>Be the first — invite friends to join AgoraWorks</div></div>';
+    return;
+  }
+  listEl.innerHTML='';
+  cachedPeople.forEach(function(p){
+    const status = currentUser ? connectionStatusWith(p.id) : null;
+    let btnHtml;
+    if(status==='friends') btnHtml='<span style="color:var(--teal); font-size:12px; font-weight:600;">✓ Friends</span>';
+    else if(status==='pending') btnHtml='<span style="color:var(--muted); font-size:12px;">Pending</span>';
+    else if(status==='incoming') btnHtml='<span style="color:var(--muted); font-size:12px;">Check requests ↑</span>';
+    else btnHtml='<button class="add-account-btn" style="margin:0; width:auto; padding:8px 14px; font-size:12px;" onclick="sendFriendRequest(\''+p.id+'\', \''+(p.name||'User').replace(/'/g,"")+'\')">+ Add</button>';
+    const row=document.createElement('div');
+    row.className='account-chip';
+    row.innerHTML='<div class="avatar">'+escapeHTML((p.name||'?').charAt(0).toUpperCase())+'</div><div style="flex:1;"><div class="chip-name">'+escapeHTML(p.name||'User')+'</div><div class="chip-sub">'+escapeHTML(p.email||'')+'</div></div>'+btnHtml
+      +'<button style="margin-left:8px; background:none; border:none; color:var(--muted); font-size:11px; cursor:pointer; font-family:inherit;" onclick="blockUserId(\''+p.id+'\', \''+(p.name||'User').replace(/'/g,"")+'\')">Block</button>';
+    listEl.appendChild(row);
+  });
+}
+
+async function renderConnect(){
+  const nameEl=document.getElementById('connectMyName');
+  const subEl=document.getElementById('connectMySub');
+  const avEl=document.getElementById('connectMyAvatar');
+  if(currentUser){
+    nameEl.textContent = currentUserName;
+    subEl.textContent = currentUser.email || '';
+    avEl.textContent = currentUserName.charAt(0).toUpperCase();
+  } else {
+    nameEl.textContent = 'Not logged in';
+    subEl.textContent = 'Log in to appear here and connect with others';
+    avEl.textContent = '?';
+  }
+  document.getElementById('connectList').innerHTML = '<div class="empty-state"><div class="big">⏳</div><div class="title">Loading people…</div></div>';
+  try{
+    await loadMyConnections();
+    const snap = await window.fbDb.collection('users').limit(50).get();
+    cachedPeople = snap.docs.map(function(d){ const v=d.data(); v.id=d.id; return v; })
+      .filter(function(p){ return !currentUser || p.id!==currentUser.uid; })
+      .filter(function(p){ return !isBlockedEitherWay(p.id); });
+    renderRequestsSection();
+    renderConnectList();
+  }catch(e){
+    document.getElementById('connectList').innerHTML = '<div class="empty-state"><div class="big">⚠️</div><div class="title">Could not load people</div><div>Please check your connection and try again</div></div>';
+  }
+}
+
+function addAccount(){ openAuth(); }
+
+function logoutActive(){
+  if(!currentUser){ openAuth(); return; }
+  doLogout();
+}
+
+renderList();
+</script>
+</body>
+</html>
